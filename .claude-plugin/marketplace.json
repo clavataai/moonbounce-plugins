@@ -1,0 +1,12 @@
+{
+  "name": "moonbounce",
+  "owner": { "name": "Moonbounce" },
+  "description": "Tools for building and improving decisions with Moonbounce.",
+  "plugins": [
+    {
+      "name": "moonbounce",
+      "source": "./",
+      "description": "The decisions skill and Moonbounce MCP server with browser sign-in."
+    }
+  ]
+}

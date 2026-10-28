@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "moonbounce": { "type": "http", "url": "https://app.moonbounce.ai/mcp" }
+  }
+}

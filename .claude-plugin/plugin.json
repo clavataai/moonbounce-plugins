@@ -1,0 +1,10 @@
+{
+  "name": "moonbounce",
+  "description": "A skill and MCP server for building and improving Moonbounce decisions.",
+  "author": { "name": "Moonbounce" },
+  "license": "MIT",
+  "repository": "https://github.com/clavataai/moonbounce-plugins",
+  "homepage": "https://github.com/clavataai/moonbounce-plugins",
+  "privacyPolicyUrl": "https://app.moonbounce.ai/privacy",
+  "keywords": ["moonbounce", "decisions", "mcp"]
+}
