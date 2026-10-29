@@ -50,7 +50,7 @@ Sign-in gives team admins and members `decisions:develop` and `decisions:evaluat
 
 ### Verification
 
-Claude Code plugin installation was observed from a local marketplace path with 2.1.312; installation from GitHub has not yet been tested. Cursor sign-in is new: the Cursor agent CLI is checked up to the sign-in page and token exchange, and the Cursor editor is not tested yet. Codex and the `npx skills` route below have not yet been tested.
+Claude Code plugin installation from GitHub was observed with 2.1.312 in a clean profile. Cursor sign-in is new: the Cursor agent CLI is checked up to the sign-in page and token exchange, and the Cursor editor is not tested yet. Codex and the `npx skills` route below have not yet been tested.
 
 ## Add the skill
 

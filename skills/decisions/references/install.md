@@ -11,7 +11,7 @@ claude plugin marketplace add clavataai/moonbounce-plugins
 claude plugin install moonbounce@moonbounce
 ```
 
-**observed** — Claude Code 2.1.312 validated and installed the plugin from a local marketplace path on 2026-10-28; `claude mcp list` showed `plugin:moonbounce:moonbounce` at `https://app.moonbounce.ai/mcp` needing authentication. Public-repository installation was **not observed**.
+**observed** — Claude Code 2.1.312 installed the plugin from `clavataai/moonbounce-plugins` on GitHub in a clean profile on 2026-10-28: the skill loaded as `decisions` and `claude mcp list` showed `plugin:moonbounce:moonbounce` at `https://app.moonbounce.ai/mcp` needing authentication.
 
 **from docs** — In a session, run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** ([MCP](https://code.claude.com/docs/en/mcp)). Invoke `/moonbounce:decisions` ([skills](https://code.claude.com/docs/en/skills)); the plugin installs the skill too. No key is bundled.
 
