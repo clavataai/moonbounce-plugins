@@ -11,7 +11,7 @@ claude plugin marketplace add clavataai/moonbounce-plugins
 claude plugin install moonbounce@moonbounce
 ```
 
-**observed** — Claude Code 2.1.312 installed the plugin from `clavataai/moonbounce-plugins` on GitHub in a clean profile on 2026-10-28: the skill loaded as `decisions` and `claude mcp list` showed `plugin:moonbounce:moonbounce` at `https://app.moonbounce.ai/mcp` needing authentication.
+**observed** — Claude Code 2.1.312 installed the plugin from `clavataai/moonbounce-plugins` on GitHub in a clean profile on 2026-10-28: the skill loaded as `decisions` and `claude mcp list` showed `plugin:moonbounce:moonbounce` at `https://app.moonbounce.ai/mcp` needing authentication. The plugin now points at `https://api.moonbounce.ai/mcp` (from source); `app.moonbounce.ai/mcp` still works, and switching to the api URL means signing in once more because it is a separate sign-in resource.
 
 **from docs** — In a session, run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** ([MCP](https://code.claude.com/docs/en/mcp)). Invoke `/moonbounce:decisions` ([skills](https://code.claude.com/docs/en/skills)); the plugin installs the skill too. No key is bundled.
 
@@ -20,7 +20,7 @@ claude plugin install moonbounce@moonbounce
 **from docs** — Moonbounce sign-in is live. Add the server ([MCP](https://code.claude.com/docs/en/mcp)):
 
 ```sh
-claude mcp add --transport http moonbounce https://app.moonbounce.ai/mcp
+claude mcp add --transport http moonbounce https://api.moonbounce.ai/mcp
 ```
 
 Then run `/mcp` → **moonbounce** → **Authenticate**.
@@ -32,7 +32,7 @@ Then run `/mcp` → **moonbounce** → **Authenticate**.
 **from docs** — Add the server to `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` ([Cursor MCP](https://cursor.com/docs/mcp)):
 
 ```json
-{"mcpServers":{"moonbounce":{"url":"https://app.moonbounce.ai/mcp"}}}
+{"mcpServers":{"moonbounce":{"url":"https://api.moonbounce.ai/mcp"}}}
 ```
 
 **from docs** — Sign in from Cursor's MCP settings (Customize → MCP) when the server needs login, or run `agent mcp login moonbounce` ([Cursor MCP](https://cursor.com/docs/mcp), [CLI MCP](https://cursor.com/docs/cli/mcp)). Sign-in from the Cursor agent CLI is checked up to the sign-in page and token exchange (2026-10-28); **not observed** — the Cursor editor's sign-in and a full Cursor session.
@@ -44,7 +44,7 @@ Then run `/mcp` → **moonbounce** → **Authenticate**.
 **from docs** — Add the HTTP server, then sign in ([Codex MCP](https://developers.openai.com/codex/mcp)):
 
 ```sh
-codex mcp add moonbounce --url https://app.moonbounce.ai/mcp
+codex mcp add moonbounce --url https://api.moonbounce.ai/mcp
 codex mcp login moonbounce
 ```
 
@@ -66,7 +66,7 @@ npx skills add clavataai/moonbounce-plugins --skill decisions
 
 ## Other MCP clients
 
-**not observed** — Connect with Streamable HTTP at `https://app.moonbounce.ai/mcp`. Moonbounce supports OAuth sign-in through MCP authorization with dynamic client registration and client ID metadata documents, or `Authorization: Bearer <key>`. Other clients have not been tested end to end.
+**not observed** — Connect with Streamable HTTP at `https://api.moonbounce.ai/mcp`. Moonbounce supports OAuth sign-in through MCP authorization with dynamic client registration and client ID metadata documents, or `Authorization: Bearer <key>`. Other clients have not been tested end to end.
 
 **not observed** — Moonbounce sign-in opens AuthKit and a team picker when needed. Admins and members get `decisions:develop` and `decisions:evaluate` in Production, including real and dry-run evaluations and reads, attributed to the person. Test (`env:test`), unattended agents, backends and REST need an API key.
 
@@ -83,7 +83,7 @@ npx skills add clavataai/moonbounce-plugins --skill decisions
   "mcpServers": {
     "moonbounce": {
       "type": "http",
-      "url": "https://app.moonbounce.ai/mcp",
+      "url": "https://api.moonbounce.ai/mcp",
       "headers": { "Authorization": "Bearer ${MOONBOUNCE_API_KEY}" }
     }
   }
@@ -105,27 +105,27 @@ npx skills add clavataai/moonbounce-plugins --skill decisions
 **from docs** — Export `MOONBOUNCE_API_KEY` before starting `codex` and configure the bearer token environment variable ([Codex MCP](https://developers.openai.com/codex/mcp)):
 
 ```sh
-codex mcp add moonbounce --url https://app.moonbounce.ai/mcp --bearer-token-env-var MOONBOUNCE_API_KEY
+codex mcp add moonbounce --url https://api.moonbounce.ai/mcp --bearer-token-env-var MOONBOUNCE_API_KEY
 ```
 
 **from docs** — Or set it in `~/.codex/config.toml` ([Codex MCP](https://developers.openai.com/codex/mcp)):
 
 ```toml
 [mcp_servers.moonbounce]
-url = "https://app.moonbounce.ai/mcp"
+url = "https://api.moonbounce.ai/mcp"
 bearer_token_env_var = "MOONBOUNCE_API_KEY"
 ```
 
 ### Other clients and REST
 
-**not observed** — Set `Authorization: Bearer <key>` through the client's secret or environment configuration. REST uses the same header at `https://app.moonbounce.ai/v1`.
+**not observed** — Set `Authorization: Bearer <key>` through the client's secret or environment configuration. REST uses the same header at `https://api.moonbounce.ai/v1`.
 
 ## Claude Code DCR fallback
 
 **not observed** — If Authenticate fails with "Dynamic Client Registration rejected", for the plugin route, disable the plugin's server in `/mcp`; for the plain route, run `claude mcp remove moonbounce`. Then run:
 
 ```sh
-claude mcp add-json moonbounce '{"type":"http","url":"https://app.moonbounce.ai/mcp","oauth":{"authServerMetadataUrl":"https://essential-sparrow-47.authkit.app/.well-known/oauth-authorization-server"}}'
+claude mcp add-json moonbounce '{"type":"http","url":"https://api.moonbounce.ai/mcp","oauth":{"authServerMetadataUrl":"https://essential-sparrow-47.authkit.app/.well-known/oauth-authorization-server"}}'
 ```
 
 **not observed** — Authenticate the replacement server through `/mcp`.

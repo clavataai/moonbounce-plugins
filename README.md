@@ -4,7 +4,7 @@ Moonbounce decisions are JSON specs your code owns, evaluated by an engine and i
 
 What's here:
 
-- Hosted MCP server: `https://app.moonbounce.ai/mcp`.
+- Hosted MCP server: `https://api.moonbounce.ai/mcp`.
 - `skills/decisions/`: a skill for building and improving decisions with any agent that supports skills.
 - A Claude Code plugin that installs both the MCP connection and skill.
 
@@ -26,7 +26,7 @@ In Claude Code, run `/mcp` → **plugin:moonbounce:moonbounce** → **Authentica
 Add to your project's `.cursor/mcp.json` or `~/.cursor/mcp.json`:
 
 ```json
-{"mcpServers":{"moonbounce":{"url":"https://app.moonbounce.ai/mcp"}}}
+{"mcpServers":{"moonbounce":{"url":"https://api.moonbounce.ai/mcp"}}}
 ```
 
 Sign in from Cursor's MCP settings (Customize → MCP) when the server needs login, or run:
@@ -38,13 +38,13 @@ agent mcp login moonbounce
 ### Codex CLI
 
 ```sh
-codex mcp add moonbounce --url https://app.moonbounce.ai/mcp
+codex mcp add moonbounce --url https://api.moonbounce.ai/mcp
 codex mcp login moonbounce
 ```
 
 ### Other MCP clients
 
-Connect to `https://app.moonbounce.ai/mcp` using Streamable HTTP. Sign in through MCP authorization; the server supports dynamic client registration and client ID metadata documents. You can also send `Authorization: Bearer <key>`.
+Connect to `https://api.moonbounce.ai/mcp` using Streamable HTTP. Sign in through MCP authorization; the server supports dynamic client registration and client ID metadata documents. You can also send `Authorization: Bearer <key>`.
 
 Sign-in gives team admins and members `decisions:develop` and `decisions:evaluate` in Production, including real and dry-run evaluations attributed to them. Test (`env:test`) and unattended agents need an API key.
 
@@ -83,7 +83,7 @@ Add to your project's `.mcp.json` and export `MOONBOUNCE_API_KEY` before startin
   "mcpServers": {
     "moonbounce": {
       "type": "http",
-      "url": "https://app.moonbounce.ai/mcp",
+      "url": "https://api.moonbounce.ai/mcp",
       "headers": { "Authorization": "Bearer ${MOONBOUNCE_API_KEY}" }
     }
   }
@@ -100,7 +100,7 @@ In `.cursor/mcp.json` or `~/.cursor/mcp.json`, use this configuration. The varia
 {
   "mcpServers": {
     "moonbounce": {
-      "url": "https://app.moonbounce.ai/mcp",
+      "url": "https://api.moonbounce.ai/mcp",
       "headers": { "Authorization": "Bearer ${env:MOONBOUNCE_API_KEY}" }
     }
   }
@@ -112,7 +112,7 @@ In `.cursor/mcp.json` or `~/.cursor/mcp.json`, use this configuration. The varia
 Export `MOONBOUNCE_API_KEY` before starting `codex`:
 
 ```sh
-codex mcp add moonbounce --url https://app.moonbounce.ai/mcp --bearer-token-env-var MOONBOUNCE_API_KEY
+codex mcp add moonbounce --url https://api.moonbounce.ai/mcp --bearer-token-env-var MOONBOUNCE_API_KEY
 ```
 
 ### Other MCP clients
@@ -126,5 +126,7 @@ claude plugin update moonbounce@moonbounce
 ```
 
 For Skills CLI installs, run `npx skills update`.
+
+The MCP server moved to `https://api.moonbounce.ai/mcp`. `https://app.moonbounce.ai/mcp` keeps working, but the new URL is a separate sign-in, so if you signed in before, run **Authenticate** once more after updating. API keys work on both.
 
 This repository is generated from Moonbounce's source repository. Changes made here are overwritten on the next sync; contact Moonbounce with issues.

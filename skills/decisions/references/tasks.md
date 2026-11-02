@@ -124,13 +124,13 @@ Before each task, list tools, find the one whose description matches the goal, a
 
 **Find:** **observed** — Find “Engine cost of one decision's evaluations and previews over a window” (`get_usage`). Read its `inputSchema` first and use its decision/window selectors.
 
-**Response fields:** **observed** — `environment`, `window`, `evaluations[]` grouped by `engine_profile` and `assignment_mode` (`primary`/`seed`), token counts, and `usd_micros: {total, mean, p50, p95}`; also `engines[]` and `previews: {runs, features_run, input_tokens, usd_micros}`. Amounts are in micro-dollars.
+**Response fields:** **observed** — `environment`, `window`, `evaluations[]` grouped by `engine_profile` and `assignment_mode` (`primary`/`seed`), token counts, and `usd_micros: {total, mean, p50, p95}`; also `engines[]` and `previews: {runs, features_run, input_tokens, usd_micros}`. Amounts are in micro-dollars. **from docs** — Each group also carries `estimated_usd_micros` (the estimated part), and the report adds `other_spend[]` (attempts that never committed, suggestion generation) and a `total`.
 
-**Per-request cost:** **from docs** — Evaluate (including dry runs), `get_evaluation`, and seeds report `cost` with the same fields as a preview. `engine_calls` counts upstream engine calls on evaluate and seeds; one call can answer several features (Jev compiles them). On previews it counts features sent to engines instead. Only previews use the feature cache today; evaluate and seeds report `cache_hits: 0`. `get_evaluation` omits `cost` if no usage row exists. `usd_micros` is millionths of a US dollar. Suggestion generation's own cost is still not reported; do not treat usage totals as including it.
+**Per-request cost:** **from docs** — Evaluate (including dry runs), `get_evaluation`, and seeds report `cost` with the same fields as a preview. `engine_calls` counts upstream engine calls on evaluate and seeds; one call can answer several features (Jev compiles them). On previews it counts features sent to engines instead. Only previews use the feature cache today; evaluate and seeds report `cache_hits: 0`. `get_evaluation` omits `cost` if no usage row exists. `usd_micros` is millionths of a US dollar. Per-request `cost` is reported cost only; suggestion generation's own cost appears only in the usage report's `other_spend`.
 
-**Scale and limits:** **observed** — The whole 2026-10-27 check, recorded as 13 evaluations, 11 seeds, and one preview, cost under USD 0.001. **from docs** — Totals under-count: abandoned calls and uncommitted evaluations record no usage, according to the tool description.
+**Scale and limits:** **observed** — The whole 2026-10-27 check, recorded as 13 evaluations, 11 seeds, and one preview, cost under USD 0.001. **from docs** — The report breaks out estimates for abandoned calls and lists evaluations that never committed under `other_spend`; `other_spend` also holds suggestion generation, and `total` adds everything recorded, according to the tool description.
 
-**Done when:** You have recorded the environment, window, evaluation and preview costs, with the accounting limitation attached.
+**Done when:** You have recorded the environment, window, evaluation and preview costs, the other spend, and how much of the total is estimated.
 
 ## Retries for every write
 
