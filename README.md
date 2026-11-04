@@ -1,6 +1,6 @@
 # Moonbounce for coding agents
 
-Moonbounce decisions are JSON specs your code owns, evaluated by an engine and improved through feedback.
+Moonbounce decisions are JSON structures your code owns, evaluated by an engine and improved through feedback.
 
 What's here:
 
