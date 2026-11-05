@@ -30,6 +30,8 @@ List tools, find the description matching the task, and read its `inputSchema` f
 | Backtest a change | “Replays a structure change over past cases with feedback.” | [Backtest a change](references/tasks.md#backtest-a-change) |
 | Ask for suggestions | “Proposes one change to the decision's structure from its feedback”; also find list/get/status and “Apply a Moonbounce suggestion to this repo.” | [Ask for suggestions](references/tasks.md#ask-for-suggestions) |
 | Pick an engine | “The engines this deployment offers,” “The decision's current binding revision,” and “Sets the engine and model a decision runs on.” | [Pick an engine](references/tasks.md#pick-an-engine) |
+| Score a dataset | “Dry-runs one version over up to 200 dataset items” (`evaluate_batch`) and “Prices one version's labeled results” (`cost_report`). | [Score a dataset](references/tasks.md#score-a-dataset) |
+| Set the objective | “Stores the decision file's `objective` as a new revision” and “The decision's current objective revision” (`set_objective`, `get_objective`). | [Set the objective](references/tasks.md#set-the-objective) |
 | Check cost | “Engine cost of one decision's evaluations and previews over a window.” | [Check cost](references/tasks.md#check-cost) |
 
 Review-queue tools serve human reviewers; agents rarely need them. Statements here without a date are from the tool descriptions and Moonbounce's guides; the references tag each claim **observed** (run live, test key, 2026-10-27) or **from docs**.
@@ -40,13 +42,14 @@ Review-queue tools serve human reviewers; agents rarely need them. Statements he
 2. Send the structure inline or as `moonbounce.structure_hash`, never both (400). Every path a question `reads` (`state.<key>`, `state.<key>.<key>`) must be in `state`, and every attribute without a default needs a value in `attribute_values` (400 `CONTENT_INVALID`).
 3. Read `status` before the result: `decided` carries `outcome`, `computed` carries `value`, `abstained` carries at most the `abstain` outcome.
 4. Feedback claims name a question (`expected_answer`) or an outcome the result can produce (`expected_outcome`), or approve/reject the returned outcome (`verdict`, never with `expected_outcome`), or flag broken content (`input_broken`); any other kind is a 400. Previews and suggestions need a result that decides outcomes (`bands`, `rules` or `match`); a value result is 400 `OUTCOMES_INVALID`. For seeded items, address feedback by the seed's `evaluation_id`.
-5. Send an `idempotency-key` argument on writes except dry runs, which refuse it. Reuse a key only to retry the same request.
+5. Send an `idempotency-key` argument on writes except dry runs, which refuse it, and `fill_review_queue`, which takes none. Reuse a key only to retry the same request.
 
 ## Build a decision with a team
 
-When you write a new structure from a person's intent, or rework one, split the work across fresh subagents so no agent grades its own work. You write the brief with the person and route files; a **case writer** writes cases with intended labels kept apart; a **blind labeler** labels them from the brief alone; the **author** writes the structure from the training split; a **red team**, on another model or vendor when you have one, attacks each version in the open; and the **judge** scores each version on train and the red rounds, and holds a hash-sealed set it scores once, with dry runs, on the final version. The light team (case writer, author, judge) fits a draft or a low-stakes two-outcome decision.
+When you write a new structure from a person's intent, or rework one, split the work across fresh subagents so no agent grades its own work. You write the brief and the decision's objective with the person and route files; a **case writer** writes cases with intended labels kept apart; a **blind labeler** labels them from the brief alone; the **author** writes the structure from the training split; a **red team**, on another model or vendor when you have one, attacks each version in the open; and the **judge** scores each version on train and the red rounds with `evaluate_batch` and `cost_report`, under the objective, and holds a hash-sealed set it scores once, the same way, on the final version. The light team (case writer, author, judge) fits a draft or a low-stakes two-outcome decision.
 
-- Sealed cases live outside the repo and never inform a revision; only the judge and you hold a production key.
+- Sealed cases and their batch ids live outside the repo and never inform a revision; only the judge and you hold a production key.
+- A version is accepted by the cost report: lower cost per case than the last accepted version, every limit kept, no new severe mistake.
 - Agent labels go in as seeds. `source: "owner"` carries the person's own judgment.
 - Stop when another model's red round, written against an accepted version, breaks nothing, or after three versions (an open brief question only pauses the loop); then score the sealed set once.
 

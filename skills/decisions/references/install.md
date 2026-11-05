@@ -125,7 +125,7 @@ bearer_token_env_var = "MOONBOUNCE_API_KEY"
 **not observed** — If Authenticate fails with "Dynamic Client Registration rejected", for the plugin route, disable the plugin's server in `/mcp`; for the plain route, run `claude mcp remove moonbounce`. Then run:
 
 ```sh
-claude mcp add-json moonbounce '{"type":"http","url":"https://api.moonbounce.ai/mcp","oauth":{"authServerMetadataUrl":"https://essential-sparrow-47.authkit.app/.well-known/oauth-authorization-server"}}'
+claude mcp add-json moonbounce '{"type":"http","url":"https://api.moonbounce.ai/mcp","oauth":{"authServerMetadataUrl":"https://auth.moonbounce.ai/.well-known/oauth-authorization-server"}}'
 ```
 
 **not observed** — Authenticate the replacement server through `/mcp`.
