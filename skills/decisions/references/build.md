@@ -11,7 +11,7 @@ The person has a policy and some data, or none. The brief is where the first str
 | `structure` | The author writes the first structure from the brief | Decision file structure | It validates, and every brief clause maps to a question |
 | `refine` | The refine loop over the dataset | Accepted versions, loss reports | **Stop:** good enough, or the target is met |
 | `blind_check` | An agent that has seen neither the structure nor the examples writes a fresh set from the frozen brief, by the same grid; scored once | `moonbounce/<id>.blind.jsonl` | **Stop:** the user accepts the result. Failures join the training set and the flow returns to `refine`; the next freeze gets a fresh blind set |
-| `import` | `import_examples` stores the dataset and runs the engines, so previews and flow 2 can use it | Server copy of the dataset | Every example stored (a failed one sent again in a new call) and `loss_report` over the runs matches the last scores; flow 1 ends |
+| `import` | `import_examples` stores the dataset and runs the engines, so previews and flow 2 can use it | Server copy of the dataset | Every example stored, except ones the person agreed to leave out (a retryable failure sent again in a new call; one with `retryable: false` fixed, dropped or taken to the person), and `loss_report` over the runs matches the last scores; flow 1 ends |
 
 At a **Stop**, show the person what the stage left and wait for their answer before moving on. When a stage is done, set the brief's `stage` to the next one and its `date` to today, then commit.
 
@@ -42,7 +42,8 @@ One agent that writes the cases, labels them, writes the structure and scores it
   - **Edge cases**: known edge cases.
   - **Clauses**: a numbered list of the rules the decision applies.
 - **The dataset**, `moonbounce/<decision_id>.examples.jsonl`. Each line is exactly one `import_examples` example: `{item_id, state, attribute_values?, metadata, claims, label_source, reason?}`.
-  - `metadata` carries `cell` (the grid cell), `group` (paraphrase twins share one) and `origin` (`user`, `synthetic` or `red`).
+  - `metadata` carries `cell` (the grid cell), `group` and `origin` (`user`, `synthetic` or `red`).
+  - `group` follows the server's rule for cases: paraphrase twins with the same outcome share one, and a boundary pair whose outcomes differ (the same message at day 29 and day 31) gets two. The server merges templated near-duplicates with the same label into one case, but it can't see paraphrases, so `group` is how the dataset keeps them together.
   - Before `labels`, lines have no `claims` or `label_source`.
   - `label_source` is `human` for a label the person gave or settled, and `synthetic` for one the case writer and the labeler agreed on.
   - `mb import` uploads the file as it is.
@@ -83,7 +84,7 @@ When the person has labeled data already, read it, and its reasons, before you w
 
 ### `cases`
 
-Brief a fresh case writer: "Write cases for the decision in `<brief>`. Use the person's data in `<files>` first, with `metadata.origin: "user"`, turned into the `state` the brief says the app sends (a ticket's `text` may be the app's `state.message`, for instance); mark everything else `synthetic`. Fill every cell of the coverage grid with at least two cases, with paraphrase twins sharing `metadata.group`. Use only the `state` keys and attribute values the brief says the app sends. Write each case to `<examples>` as `{item_id, state, attribute_values?, metadata: {cell, group, origin}}`. Write its intended outcome and a one-line reason citing a clause to `<intended>` as `{item_id, label, reason}`, never in the case itself. Read nothing else."
+Brief a fresh case writer: "Write cases for the decision in `<brief>`. Use the person's data in `<files>` first, with `metadata.origin: "user"`, turned into the `state` the brief says the app sends (a ticket's `text` may be the app's `state.message`, for instance); mark everything else `synthetic`. Fill every cell of the coverage grid with at least two cases, with paraphrase twins that have the same outcome sharing `metadata.group`, and a boundary pair (one fact apart, different outcomes) in two groups. Use only the `state` keys and attribute values the brief says the app sends. Write each case to `<examples>` as `{item_id, state, attribute_values?, metadata: {cell, group, origin}}`. Write its intended outcome and a one-line reason citing a clause to `<intended>` as `{item_id, label, reason}`, never in the case itself. Read nothing else."
 
 When the person's data carries labels, those lines go into the dataset with their label, `label_source` and `reason` as they are. Use `label_source: "human"` only when the person says they or their team labeled it, and `unknown` when nobody knows who did. Their label is the intended one, so the case writer writes no intended label for them. The labeler still labels them blind.
 
@@ -175,9 +176,11 @@ Store the dataset and the blind set, each with its own import: `mb import moonbo
 How failures come back:
 
 - A 400 refuses the whole call before any engine call. Fix or leave out the example it names.
-- Otherwise failures are per example: the rest are stored. Send the failed ones again in a new call with a new key.
+- Otherwise failures are per example: the rest are stored. Read each failure's `error.retryable`:
+  - **`true`** (an outage, or not started in time): send it again in a new call with a new key.
+  - **`false`**: sending it again fails the same way. The cause may be the content (the engine refused or couldn't read it) or the engine (an answer it couldn't use, a model other than the binding's), and `error.code` and `message` often don't say which. Don't change or drop the example on your own: show the person the failed items with their `error.code`, `message` and the binding (`get_binding`), and fix, drop or reconfigure as they decide.
 
-Read each import's `loss_report` over its calls' `run_id`s (`mb import` prints it). The dataset's loss per case should match the last refine score, and the blind set's the `blind_check` score, within noise. A difference means the imported examples aren't what was scored: check the file and the structure hash.
+Read each import's `loss_report` over its calls' `run_id`s (`mb import` prints it). The dataset's loss per case should match the last refine score, and the blind set's the `blind_check` score, within noise. A permanent failure still counts in its run as a mistake (`failed` in the report), even after you drop the example from the file: compare without those. A fixed example sent again, under the same `item_id` and the same version (structure, engine and binding revision), replaces its failure when you list its run beside the original. After a binding change, runs of the two versions can't be listed together (400 `RUNS_MIXED`): compare the new runs alone. A difference means the imported examples aren't what was scored: check the file and the structure hash.
 
 Then put the decision file in the caller's code, so the app sends that structure. Set the brief's `stage` to `done`. Later work on this decision is flow 2.
 

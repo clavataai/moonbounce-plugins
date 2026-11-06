@@ -14,7 +14,7 @@ At a **Stop**, show the person what the stage left and wait for their answer bef
 
 The brief is context here. When it exists, it settles which side is right when feedback conflicts, and a policy change updates it first. Reports show human-labeled and synthetic cases apart, and real data decides when they disagree.
 
-Use the key for the environment whose traffic you are improving, usually production. Every stage reads, except `ship` and dry runs.
+Use the key for the environment whose traffic you are improving, usually production. Scoring is always dry runs, and only these steps write: registering a structure (`register_structure`, at `baseline` and for each kept version), storing the objective (`set_objective`, before the first scoring when the stored one differs from the decision file's, and at `ship`), a label the person has you correct at `brief_check`, and `ship`. Registering changes nothing the decision runs; the objective changes what every later report scores by, so say so to the person before storing it.
 
 ## Stages
 
@@ -35,7 +35,12 @@ Then check the brief against what the decision does and what people said:
 - **Every question traces to a clause:** a question with no clause is a gap in the brief or a question to drop.
 - **Nothing contradicts it:** read recent `reasons` and `expected` from `list_cases` (newest first), and the feedback export (REST `GET /v1/decisions/{decision_id}/feedback`, not an MCP tool) when you have a key. Look for a reason or an `expected_outcome` that contradicts a clause.
 
-Show the person the gaps and contradictions. A contradiction is settled in the brief first: the person decides whether the clause or the feedback is wrong. Record the structure hash you checked against and the date in the front matter.
+Show the person the gaps and contradictions. A contradiction is settled in the brief first: the person decides whether the clause or the feedback is wrong.
+
+- **The clause is wrong:** update the brief. The feedback stands.
+- **The feedback is wrong:** correct the label, or later case runs keep scoring against it. With the person's confirmation, send `submit_feedback` about the case's `evaluation_id` with `source: "owner"`, an `expected_outcome` claim with the right outcome, and a `reason` naming the clause. The owner's label outranks reviewers' and imported ones, and a later owner label replaces an earlier one ([Add labeled data](tasks.md#add-labeled-data)). The outcome must be one the case's own structure can produce (a 400 otherwise). When the right outcome is one the brief added since, the case can't be relabeled in place and keeps scoring against its old label: tell the person.
+
+Record the structure hash you checked against and the date in the front matter.
 
 ### `baseline`
 

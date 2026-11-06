@@ -31,6 +31,7 @@ List tools, find the description matching the task, and read its `inputSchema` f
 | Backtest a change | “Replays a structure change over past cases with feedback.” | [Backtest a change](references/tasks.md#backtest-a-change) |
 | Pick an engine | “The engines this deployment offers,” “The decision's current binding revision,” and “Sets the engine and model a decision runs on.” | [Pick an engine](references/tasks.md#pick-an-engine) |
 | Score a dataset | `evaluate` with `items` (“**A run**” in its description) and “Judges one version's labeled results” (`loss_report`). | [Score a dataset](references/tasks.md#score-a-dataset) |
+| Tune a cut | “Sweep a cut over a run's answers” (`sweep_cut`): the loss at every point a cut could move to, from a run's answers, with no engine calls. | [Tune a cut](references/refine.md#tune-a-cut-with-sweep_cut) |
 | List labeled cases | “The decision's labeled cases in the key's environment” (`list_cases`). | [List labeled cases](references/tasks.md#list-labeled-cases) |
 | Set the objective | “Stores the decision file's `objective` as a new revision” and “The decision's current objective revision” (`set_objective`, `get_objective`). | [Set the objective](references/tasks.md#set-the-objective) |
 | Check cost | “Engine cost of one decision's evaluations and previews over a window.” | [Check cost](references/tasks.md#check-cost) |
