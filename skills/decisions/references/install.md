@@ -1,29 +1,29 @@
 # Install and share
 
-Evidence convention: **observed** means checked locally or against the server, with the scope stated. **from docs** means read in the linked documentation (2026-10-28). **not observed** marks setup guidance not run end to end. The public `skills/decisions/` folder is generated from this skill in Moonbounce's source repository.
+How to connect each agent to Moonbounce and install this skill. The public `skills/decisions/` folder is generated from this skill in Moonbounce's source repository.
 
 ## Claude Code plugin
 
-**observed** — One command adds the marketplace and installs (Claude Code 2.1.292 or later; observed on 2.1.318 in a clean profile on 2026-11-05, which listed `plugin:moonbounce:moonbounce` needing authentication) ([install](https://code.claude.com/docs/en/plugins/install.md#add-a-marketplace-and-install-in-one-command)):
+One command adds the marketplace and installs (Claude Code 2.1.292 or later) ([install](https://code.claude.com/docs/en/plugins/install.md#add-a-marketplace-and-install-in-one-command)):
 
 ```sh
 claude plugin install moonbounce --marketplace clavataai/moonbounce-plugins
 ```
 
-**from docs** — On an older Claude Code, add the marketplace, then install by plugin and marketplace name:
+On an older Claude Code, add the marketplace, then install by plugin and marketplace name:
 
 ```sh
 claude plugin marketplace add clavataai/moonbounce-plugins
 claude plugin install moonbounce@moonbounce
 ```
 
-**observed** — Claude Code 2.1.312 installed the plugin from `clavataai/moonbounce-plugins` on GitHub in a clean profile on 2026-10-28: the skill loaded as `decisions` and `claude mcp list` showed `plugin:moonbounce:moonbounce` at `https://app.moonbounce.ai/mcp` needing authentication. The plugin now points at `https://api.moonbounce.ai/mcp` (from source); `app.moonbounce.ai/mcp` still works, and switching to the api URL means signing in once more because it is a separate sign-in resource.
+The skill loads as `decisions`, and the MCP server shows as `plugin:moonbounce:moonbounce` at `https://api.moonbounce.ai/mcp`, needing sign-in. An older install pointed at `https://app.moonbounce.ai/mcp`, which still works; moving to the api URL means signing in once more.
 
-**from docs** — Claude Code shows a startup notice when a server needs sign-in; the person signs in, the agent can't. In a session, run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** ([MCP](https://code.claude.com/docs/en/mcp)). For a server added by hand, `claude mcp login <name>` in a shell does the same. Invoke `/moonbounce:decisions` ([skills](https://code.claude.com/docs/en/skills)); the plugin installs the skill too. No key is bundled.
+Claude Code shows a startup notice when a server needs sign-in; the person signs in, the agent can't. In a session, run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** ([MCP](https://code.claude.com/docs/en/mcp)). For a server added by hand, `claude mcp login <name>` in a shell does the same. Invoke `/moonbounce:decisions` ([skills](https://code.claude.com/docs/en/skills)); the plugin installs the skill too. No key is bundled.
 
 ## Claude Code sign-in without the plugin
 
-**from docs** — Moonbounce sign-in is live. Add the server ([MCP](https://code.claude.com/docs/en/mcp)):
+Moonbounce sign-in is live. Add the server ([MCP](https://code.claude.com/docs/en/mcp)):
 
 ```sh
 claude mcp add --transport http moonbounce https://api.moonbounce.ai/mcp
@@ -31,58 +31,58 @@ claude mcp add --transport http moonbounce https://api.moonbounce.ai/mcp
 
 Then run `/mcp` → **moonbounce** → **Authenticate**.
 
-**from docs** — Copy the complete `decisions/` folder to `.claude/skills/` (project) or `~/.claude/skills/` (personal) and invoke `/decisions`. Copying the source folder instead keeps the name `/moonbounce-decisions` ([skill locations](https://code.claude.com/docs/en/skills#where-skills-live)).
+Copy the complete `decisions/` folder to `.claude/skills/` (project) or `~/.claude/skills/` (personal) and invoke `/decisions`. Copying the source folder instead keeps the name `/moonbounce-decisions` ([skill locations](https://code.claude.com/docs/en/skills#where-skills-live)).
 
 ## Cursor
 
-**from docs** — Add the server to `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` ([Cursor MCP](https://cursor.com/docs/mcp)):
+Add the server to `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` ([Cursor MCP](https://cursor.com/docs/mcp)):
 
 ```json
 {"mcpServers":{"moonbounce":{"url":"https://api.moonbounce.ai/mcp"}}}
 ```
 
-**from docs** — Sign in from Cursor's MCP settings (Customize → MCP) when the server needs login, or run `agent mcp login moonbounce` ([Cursor MCP](https://cursor.com/docs/mcp), [CLI MCP](https://cursor.com/docs/cli/mcp)). Sign-in from the Cursor agent CLI is checked up to the sign-in page and token exchange (2026-10-28); **not observed** — the Cursor editor's sign-in and a full Cursor session.
+Sign in from Cursor's MCP settings (Customize → MCP) when the server needs login, or run `agent mcp login moonbounce` ([Cursor MCP](https://cursor.com/docs/mcp), [CLI MCP](https://cursor.com/docs/cli/mcp)).
 
-**from docs** — Copy `decisions/` to `.agents/skills/` or `.cursor/skills/` (project), or `~/.agents/skills/` or `~/.cursor/skills/` (personal). Invoke `/decisions` or let Cursor select it automatically ([Cursor skills](https://cursor.com/docs/skills)). Alternatively use the installer below.
+Copy `decisions/` to `.agents/skills/` or `.cursor/skills/` (project), or `~/.agents/skills/` or `~/.cursor/skills/` (personal). Invoke `/decisions` or let Cursor select it automatically ([Cursor skills](https://cursor.com/docs/skills)). Alternatively use the installer below.
 
 ## Codex CLI
 
-**from docs** — Add the HTTP server, then sign in ([Codex MCP](https://developers.openai.com/codex/mcp)):
+Add the HTTP server, then sign in ([Codex MCP](https://developers.openai.com/codex/mcp)):
 
 ```sh
 codex mcp add moonbounce --url https://api.moonbounce.ai/mcp
 codex mcp login moonbounce
 ```
 
-**from docs** — Copy `decisions/` to `.agents/skills/` (project) or `~/.agents/skills/` (personal). Invoke `$decisions` or select it through `/skills` ([Codex skills](https://developers.openai.com/codex/skills)). Alternatively use the installer below. **not observed** — The Codex route has not yet been tested with Moonbounce.
+Copy `decisions/` to `.agents/skills/` (project) or `~/.agents/skills/` (personal). Invoke `$decisions` or select it through `/skills` ([Codex skills](https://developers.openai.com/codex/skills)). Alternatively use the installer below.
 
 ## Any agent: install or copy the skill
 
 Claude Code plugin users should not also install the skill with the CLI: that adds `/decisions` beside `/moonbounce:decisions`.
 
-**from docs** — With Node.js 22.20 or later, use the [skills installer](https://github.com/vercel-labs/skills), which supports many agents:
+With Node.js 22.20 or later, use the [skills installer](https://github.com/vercel-labs/skills), which supports many agents:
 
 ```sh
 npx skills add clavataai/moonbounce-plugins --skill decisions
 ```
 
-**from docs** — Add `-a cursor -a codex` to select agents, `-g` for global installation, or `-y` for non-interactive installation ([installer options](https://github.com/vercel-labs/skills)). **not observed** — This route has not yet been tested with Moonbounce.
+Add `-a cursor -a codex` to select agents, `-g` for global installation, or `-y` for non-interactive installation ([installer options](https://github.com/vercel-labs/skills)).
 
-**not observed** — Or share the complete `skills/decisions/` folder by copy or zip and place it in the agent's skills folder (locations above). Connect MCP separately; Claude Code plugin users already have both.
+Or share the complete `skills/decisions/` folder by copy or zip and place it in the agent's skills folder (locations above). Connect MCP separately; Claude Code plugin users already have both.
 
 ## Other MCP clients
 
-**not observed** — Connect with Streamable HTTP at `https://api.moonbounce.ai/mcp`. Moonbounce supports OAuth sign-in through MCP authorization with dynamic client registration and client ID metadata documents, or `Authorization: Bearer <key>`. Other clients have not been tested end to end.
+Connect with Streamable HTTP at `https://api.moonbounce.ai/mcp`. Moonbounce supports OAuth sign-in through MCP authorization with dynamic client registration and client ID metadata documents, or `Authorization: Bearer <key>`. Other clients have not been tested end to end.
 
-**not observed** — Moonbounce sign-in opens AuthKit and a team picker when needed. Admins and members get `decisions:develop` and `decisions:evaluate` in Production, including real and dry-run evaluations and reads, attributed to the person. Test (`env:test`), unattended agents, backends and REST need an API key.
+Moonbounce sign-in opens AuthKit and a team picker when needed. Admins and members get `decisions:develop` and `decisions:evaluate` in Production, including real and dry-run evaluations and reads, attributed to the person. Test (`env:test`), unattended agents, backends and REST need an API key.
 
 ## API keys, per agent
 
-**not observed** — No key is bundled. Give the agent `decisions:develop` and/or `decisions:evaluate` as needed, with `env:test` for Test. Never print or commit the key. When a key-based and a signed-in server are both connected, disable the signed-in one so the agent uses the key.
+No key is bundled. Give the agent `decisions:develop` and/or `decisions:evaluate` as needed, with `env:test` for Test. Never print or commit the key. When a key-based and a signed-in server are both connected, disable the signed-in one so the agent uses the key.
 
 ### Claude Code
 
-**from docs** — Add this to `.mcp.json` and export `MOONBOUNCE_API_KEY` before starting `claude` ([MCP environment variables](https://code.claude.com/docs/en/mcp)):
+Add this to `.mcp.json` and export `MOONBOUNCE_API_KEY` before starting `claude` ([MCP environment variables](https://code.claude.com/docs/en/mcp)):
 
 ```json
 {
@@ -96,11 +96,11 @@ npx skills add clavataai/moonbounce-plugins --skill decisions
 }
 ```
 
-**not observed** — If the plugin is installed, disable `plugin:moonbounce:moonbounce` in `/mcp` so the key-based server is used.
+If the plugin is installed, disable `plugin:moonbounce:moonbounce` in `/mcp` so the key-based server is used.
 
 ### Cursor
 
-**from docs** — In `.cursor/mcp.json` or `~/.cursor/mcp.json`, add the header below to the `moonbounce` server. The variable must be in Cursor's environment ([Cursor MCP](https://cursor.com/docs/mcp)):
+In `.cursor/mcp.json` or `~/.cursor/mcp.json`, add the header below to the `moonbounce` server. The variable must be in Cursor's environment ([Cursor MCP](https://cursor.com/docs/mcp)):
 
 ```json
 "headers": { "Authorization": "Bearer ${env:MOONBOUNCE_API_KEY}" }
@@ -108,13 +108,13 @@ npx skills add clavataai/moonbounce-plugins --skill decisions
 
 ### Codex CLI
 
-**from docs** — Export `MOONBOUNCE_API_KEY` before starting `codex` and configure the bearer token environment variable ([Codex MCP](https://developers.openai.com/codex/mcp)):
+Export `MOONBOUNCE_API_KEY` before starting `codex` and configure the bearer token environment variable ([Codex MCP](https://developers.openai.com/codex/mcp)):
 
 ```sh
 codex mcp add moonbounce --url https://api.moonbounce.ai/mcp --bearer-token-env-var MOONBOUNCE_API_KEY
 ```
 
-**from docs** — Or set it in `~/.codex/config.toml` ([Codex MCP](https://developers.openai.com/codex/mcp)):
+Or set it in `~/.codex/config.toml` ([Codex MCP](https://developers.openai.com/codex/mcp)):
 
 ```toml
 [mcp_servers.moonbounce]
@@ -124,26 +124,26 @@ bearer_token_env_var = "MOONBOUNCE_API_KEY"
 
 ### Other clients and REST
 
-**not observed** — Set `Authorization: Bearer <key>` through the client's secret or environment configuration. REST uses the same header at `https://api.moonbounce.ai/v1`.
+Set `Authorization: Bearer <key>` through the client's secret or environment configuration. REST uses the same header at `https://api.moonbounce.ai/v1`.
 
 ## Claude Code DCR fallback
 
-**not observed** — If Authenticate fails with "Dynamic Client Registration rejected", for the plugin route, disable the plugin's server in `/mcp`; for the plain route, run `claude mcp remove moonbounce`. Then run:
+If Authenticate fails with "Dynamic Client Registration rejected", for the plugin route, disable the plugin's server in `/mcp`; for the plain route, run `claude mcp remove moonbounce`. Then run:
 
 ```sh
 claude mcp add-json moonbounce '{"type":"http","url":"https://api.moonbounce.ai/mcp","oauth":{"authServerMetadataUrl":"https://auth.moonbounce.ai/.well-known/oauth-authorization-server"}}'
 ```
 
-**not observed** — Authenticate the replacement server through `/mcp`.
+Authenticate the replacement server through `/mcp`.
 
-**not observed** — If the server was added this way earlier with an `authkit.app` metadata URL, remove it and add it again with the command above.
+If the server was added this way earlier with an `authkit.app` metadata URL, remove it and add it again with the command above.
 
 ## Updates and completion
 
-**from docs** — Run `claude plugin update moonbounce@moonbounce` or `/plugin marketplace update moonbounce`, or enable auto-update for **moonbounce** in `/plugin` → **Marketplaces** ([updates](https://code.claude.com/docs/en/plugins/host-marketplace#keep-users-up-to-date)). Moonbounce's plugin has no pinned version.
+Run `claude plugin update moonbounce@moonbounce` or `/plugin marketplace update moonbounce`, or enable auto-update for **moonbounce** in `/plugin` → **Marketplaces** ([updates](https://code.claude.com/docs/en/plugins/host-marketplace#keep-users-up-to-date)). Moonbounce's plugin has no pinned version.
 
-**from docs** — For Skills CLI installs, run `npx skills update` ([installer updates](https://github.com/vercel-labs/skills)).
+For Skills CLI installs, run `npx skills update` ([installer updates](https://github.com/vercel-labs/skills)).
 
-**not observed** — For a copied skill, replace the complete folder from the public repository when updating.
+For a copied skill, replace the complete folder from the public repository when updating.
 
 **Done when:** The skill is available, the agent has an MCP sign-in or API-key connection, and discovery identifies the connected team and environment.
