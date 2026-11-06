@@ -4,7 +4,13 @@ Evidence convention: **observed** means checked locally or against the server, w
 
 ## Claude Code plugin
 
-**from docs** — Add the marketplace, then install by plugin and marketplace name ([marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)):
+**observed** — One command adds the marketplace and installs (Claude Code 2.1.292 or later; observed on 2.1.318 in a clean profile on 2026-11-05, which listed `plugin:moonbounce:moonbounce` needing authentication) ([install](https://code.claude.com/docs/en/plugins/install.md#add-a-marketplace-and-install-in-one-command)):
+
+```sh
+claude plugin install moonbounce --marketplace clavataai/moonbounce-plugins
+```
+
+**from docs** — On an older Claude Code, add the marketplace, then install by plugin and marketplace name:
 
 ```sh
 claude plugin marketplace add clavataai/moonbounce-plugins
@@ -13,7 +19,7 @@ claude plugin install moonbounce@moonbounce
 
 **observed** — Claude Code 2.1.312 installed the plugin from `clavataai/moonbounce-plugins` on GitHub in a clean profile on 2026-10-28: the skill loaded as `decisions` and `claude mcp list` showed `plugin:moonbounce:moonbounce` at `https://app.moonbounce.ai/mcp` needing authentication. The plugin now points at `https://api.moonbounce.ai/mcp` (from source); `app.moonbounce.ai/mcp` still works, and switching to the api URL means signing in once more because it is a separate sign-in resource.
 
-**from docs** — In a session, run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** ([MCP](https://code.claude.com/docs/en/mcp)). Invoke `/moonbounce:decisions` ([skills](https://code.claude.com/docs/en/skills)); the plugin installs the skill too. No key is bundled.
+**from docs** — Claude Code shows a startup notice when a server needs sign-in; the person signs in, the agent can't. In a session, run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** ([MCP](https://code.claude.com/docs/en/mcp)). For a server added by hand, `claude mcp login <name>` in a shell does the same. Invoke `/moonbounce:decisions` ([skills](https://code.claude.com/docs/en/skills)); the plugin installs the skill too. No key is bundled.
 
 ## Claude Code sign-in without the plugin
 
@@ -129,6 +135,8 @@ claude mcp add-json moonbounce '{"type":"http","url":"https://api.moonbounce.ai/
 ```
 
 **not observed** — Authenticate the replacement server through `/mcp`.
+
+**not observed** — If the server was added this way earlier with an `authkit.app` metadata URL, remove it and add it again with the command above.
 
 ## Updates and completion
 

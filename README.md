@@ -15,11 +15,12 @@ The root `.mcp.json` and `.claude-plugin/` are the Claude Code plugin's config.
 ### Claude Code
 
 ```sh
-claude plugin marketplace add clavataai/moonbounce-plugins
-claude plugin install moonbounce@moonbounce
+claude plugin install moonbounce --marketplace clavataai/moonbounce-plugins
 ```
 
-In Claude Code, run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate**. Invoke the skill with `/moonbounce:decisions`; the plugin already installs it.
+That needs Claude Code 2.1.292 or later; on an older version, run `claude plugin marketplace add clavataai/moonbounce-plugins`, then `claude plugin install moonbounce@moonbounce`.
+
+Then sign in: run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** (Claude Code also shows a notice at startup when it's needed; your agent can't start sign-in for you). Invoke the skill with `/moonbounce:decisions`; the plugin already installs it. Start with `/moonbounce:start <decision_id>`: it builds a decision from a policy or improves one from its feedback, whichever you ask for or the repo calls for. `/moonbounce:build <decision_id>` and `/moonbounce:improve <decision_id>` name the flow directly. Either resumes where `moonbounce/<decision_id>.brief.md` says it stopped. MCP clients without the plugin have the same two flows as the prompts `build_decision` and `improve_decision`.
 
 ### Cursor
 
