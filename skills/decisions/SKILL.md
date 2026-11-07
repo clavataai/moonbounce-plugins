@@ -7,6 +7,24 @@ description: "Use when calling the Moonbounce Decisions MCP or API: build a deci
 
 A decision is a JSON **structure**: `questions` a model answers over the call's `state` (each may list the `state.<key>` paths it `reads`, nested ones like `state.order.total` included), optional `attributes` the caller supplies, `aggregations` that combine them (weights, thresholds and cut points written in), and a `result` naming the final feature. Every reference inside a structure is a path: `questions.<name>`, `attributes.<name>` or `aggregations.<name>` (`"result": "aggregations.handling"`); a bare name is a 400. The caller's code owns the structure; Moonbounce runs it, records evaluations and learns from feedback. Imported examples, feedback, review and previews all take this shape.
 
+## The smallest call
+
+Two calls that store nothing show the connection works. Use the tools, or REST with `Authorization: Bearer <key>`:
+
+1. `whoami` (`GET /v1/whoami`) returns the org, environment and scopes behind the key or sign-in. It reads nothing and spends nothing.
+2. A dry-run `evaluate` (`POST /v1/evaluate`) registers and stores nothing, spends one model call, and answers with `status`, `answers`, the `version` that ran (`number` is `null` while that structure isn't registered yet; a dry run registers nothing) and `cost`:
+
+```json
+{
+  "state": { "message": "The zipper on my tent broke the first night. Can I return it?" },
+  "questions": { "defective": { "type": "noul", "instructions": "Does the customer describe a defect or damage?" } },
+  "result": "questions.defective",
+  "moonbounce": { "decision_id": "skill.smoke", "item_id": "t-001", "dry_run": true }
+}
+```
+
+Everything else here builds on that call: the structure grows aggregations and cut points, and dropping `dry_run` stores the evaluation. Then run the discovery routine below.
+
 ## Discovery routine — first, every session
 
 1. Use the connected `moonbounce` MCP server (with the Claude Code plugin it appears as `plugin:moonbounce:moonbounce`). If it's listed but its tools aren't available because it needs sign-in, you can't start sign-in yourself: ask the person to run `/mcp` → the server → **Authenticate** (or `claude mcp login <name>` in a shell, for a server they added by hand), then continue. If none, connect your agent to `https://api.moonbounce.ai/mcp` by sign-in or key; see [per-agent installation](references/install.md). Sign-in gives admins and members `decisions:develop` and `decisions:evaluate` in Production, including real and dry-run evaluations and reads, attributed to the person. Unattended agents, backends, Test (`env:test`) and REST need an API key with `decisions:develop`/`decisions:evaluate` as needed; send it as `Authorization: Bearer <key>`. Never print the key. Disable any signed-in server when using a key-based connection. JSON-RPC `tools/list` returns every tool with its full JSON schema inline. If MCP is unavailable, use REST and read `https://api.moonbounce.ai/openapi.json`. Done when the tool catalog or OpenAPI document is available.
