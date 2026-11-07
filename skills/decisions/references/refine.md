@@ -23,7 +23,7 @@ Never score by hand, and never pass the results back yourself. Pass `run_id`s so
   - Call `create_run` with `cases` in place of `items`: either `{evaluation_ids}` from `list_cases`, or its filters with `limit` and `cursor`. Cases are always dry runs. A run takes at most 200 cases, so page larger sets and score both versions over the same pages.
   - Each case reuses the answers it stored for questions the version didn't change.
   - Filter by `label_source` to score human-labeled cases apart from the rest: real labels decide in the improve flow.
-  - A `preview` is two of these runs and a `loss_report` in one call, over the newest 500 cases. It returns compact reports with no `run_id`s to page and no split by label source, so the improve flow scores with the runs themselves.
+  - A preview (`create_preview`) is two of these runs and a `loss_report` in one call, over the newest 500 cases. It returns compact reports with no `run_id`s to page and no split by label source, so the improve flow scores with the runs themselves.
 - **Judge.**
   - Call `loss_report` with `{candidate: {run_ids}, base: {run_ids}}`. It returns `loss_per_case`, `accepted` and `reasons`, plus the roll-ups below.
   - Page through the cases behind a roll-up with `cases: {filter: {kind: "wrong"}}` (or `cases: {filter, sample: n}` for a spread of n of them). The other kinds are `severe`, `changed`, `missing_criterion`, `{kind: "cell", expected, got?}`, `{kind: "question", question}` and `{kind: "near_cut", at}`.

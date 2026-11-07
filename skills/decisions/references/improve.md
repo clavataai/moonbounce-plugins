@@ -91,7 +91,7 @@ Run each step once per label source that has cases, as in `baseline`, and judge 
 
 Score the synthetic set the same way, with dry runs over `items`, judged by its own `loss_report`. When the deciding report and the rest disagree, the deciding report wins.
 
-Register each version you keep (`register_decision`), so it can be the next base. `preview` gives the same comparison in one call when you only need the headline: it has no run ids to page and doesn't split by label source.
+Register each version you keep (`register_decision`), so it can be the next base. `create_preview` gives the same comparison in one call when you only need the headline: it has no run ids to page and doesn't split by label source.
 
 ### `red_team`
 

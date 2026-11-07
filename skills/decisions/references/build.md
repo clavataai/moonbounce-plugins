@@ -150,7 +150,7 @@ Done when it validates and every clause maps to a question.
 
 ### `refine`
 
-Run [the refine loop](refine.md) over `examples.jsonl`, with the author editing and you scoring. The version registered at `structure` is the first kept version. Don't use `preview` here: it replays stored cases, and the build flow has none yet.
+Run [the refine loop](refine.md) over `examples.jsonl`, with the author editing and you scoring. The version registered at `structure` is the first kept version. Don't use `create_preview` here: it replays stored cases, and the build flow has none yet.
 
 The stage stops when the person says the decision is good enough. Report `target_met` when they set a target, but it never stops the loop on its own.
 
