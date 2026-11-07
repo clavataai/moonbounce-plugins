@@ -15,13 +15,13 @@ At a **Stop**, show the person what the stage left and wait for their answer bef
 
 The brief is context here. When it exists, it settles which side is right when feedback conflicts, and a policy change updates it first. Reports show human-labeled and synthetic cases apart, and real data decides when they disagree.
 
-Use the key for the environment whose traffic you are improving, usually production. Scoring is always dry runs, and only these steps write: registering a structure (`register_structure`, at `baseline` and for each kept version), storing the objective (`set_objective`, before the first scoring when the stored one differs from the decision file's, and at `ship`), a label the person has you correct at `brief_check`, and `ship`. Registering changes nothing the decision runs; the objective changes what every later report scores by, so say so to the person before storing it.
+Use the key for the environment whose traffic you are improving, usually production. Scoring is always dry runs, and only these steps write: registering a structure (`register_decision`, at `baseline` and for each kept version), storing the objective (`set_objective`, before the first scoring when the stored one differs from the decision file's, and at `ship`), a label the person has you correct at `brief_check`, and `ship`. Registering changes nothing the decision runs; the objective changes what every later report scores by, so say so to the person before storing it.
 
 ## Stages
 
 ### `brief_check`
 
-First find the structure in use: `list_evaluations` with `assignment_mode: primary` and `limit: 1`, and read `version.structure_hash`. With no primary traffic yet (just after the build flow, say), use the newest imported example's (`assignment_mode: example`). With no evaluations at all, use the repo's decision file: its `hash_structure` hash is the structure in use, and `get_structure` with it tells you whether it's registered. Without a file, use the newest registered structure (`list_structures`, newest first) and say so. With none of these, there is nothing to improve yet: tell the person and suggest the build flow. Read it with `get_structure`. When the repo has no decision file (the structure lives in the app's code), write `moonbounce/<decision_id>.json` from it as `{decision_id, structure, objective}`, with the stored objective from `get_objective` (leave `objective` out when none is stored), and tell the person. When the repo has one, check it is the same structure: `hash_structure` on the file's structure must return that hash. If they differ, ask the person which one is current.
+First find the structure in use: `list_evaluations` with `assignment_mode: primary` and `limit: 1`, and read `version.structure_hash`. With no primary traffic yet (just after the build flow, say), use the newest imported example's (`assignment_mode: example`). With no evaluations at all, use the repo's decision file: its hash (`mb validate --local`) is the structure in use, and `get_version` with it tells you whether it's registered. Without a file, use the newest registered version (`list_versions`, newest number first) and say so. With none of these, there is nothing to improve yet: tell the person and suggest the build flow. Read it with `get_version` (its `ref` is the hash or the version number). When the repo has no decision file (the structure lives in the app's code), write `moonbounce/<decision_id>.json` from it as `{decision_id, structure, objective}`, with the stored objective from `get_objective` (leave `objective` out when none is stored), and tell the person. When the repo has one, check it is the same structure: `mb validate --local` on the decision file must return that hash. If they differ, ask the person which one is current.
 
 Then read `moonbounce/<decision_id>.brief.md`. When there is no brief, draft one from the structure, in the sections [build.md](build.md#files) lists:
 
@@ -49,7 +49,7 @@ Record the structure hash you checked against and the date in the front matter.
 
 The baseline is the structure `brief_check` found, unless the person names another.
 
-If the baseline isn't registered (the repo's decision file, say), register it first (`register_structure`). Score it on the cases with `evaluate` with `cases` and `loss_report`, with one run per label source: `cases.label_source` takes one value, so `human`, `unknown` and `synthetic` are three runs. Check `list_cases` with each `label_source` first and skip a source with no cases, since a case run that matches nothing is a 400 `NO_CASES`. A case run takes at most 200 cases: with more, page it (`cases.limit: 200`, then `cases.cursor` set to the last run's `cases.next_cursor`) and list every page's run on its side of `loss_report`. Keep the reports and run ids. The baseline is the first kept version, so it is what the first candidate must beat. If the objective isn't stored in this environment, or differs from the decision file's, store it first (`set_objective`).
+If the baseline isn't registered (the repo's decision file, say), register it first (`register_decision`, or `mb register`). Score it on the cases with `evaluate` with `cases` and `loss_report`, with one run per label source: `cases.label_source` takes one value, so `human`, `unknown` and `synthetic` are three runs. Check `list_cases` with each `label_source` first and skip a source with no cases, since a case run that matches nothing is a 400 `NO_CASES`. A case run takes at most 200 cases: with more, page it (`cases.limit: 200`, then `cases.cursor` set to the last run's `cases.next_cursor`) and list every page's run on its side of `loss_report`. Keep the reports and run ids. The baseline is the first kept version, so it is what the first candidate must beat. If the objective isn't stored in this environment, or differs from the decision file's, store it first (`set_objective`).
 
 ### `cases`
 
@@ -91,7 +91,7 @@ Run each step once per label source that has cases, as in `baseline`, and judge 
 
 Score the synthetic set the same way, with dry runs over `items`, judged by its own `loss_report`. When the deciding report and the rest disagree, the deciding report wins.
 
-Register each version you keep (`register_structure`), so it can be the next base. `preview` gives the same comparison in one call when you only need the headline: it has no run ids to page and doesn't split by label source.
+Register each version you keep (`register_decision`), so it can be the next base. `preview` gives the same comparison in one call when you only need the headline: it has no run ids to page and doesn't split by label source.
 
 ### `red_team`
 
@@ -109,7 +109,7 @@ Red cases are synthetic: they are reported apart and never outweigh real labels 
 
 The person decides to ship. Then do these in order:
 
-1. Register the chosen structure in each environment it will run in (`register_structure`), and check the returned hash against the one you scored.
+1. Register the chosen structure in each environment it will run in (`register_decision`), and check the returned `version.structure_hash` against the one you scored.
 2. Check the binding (`get_binding`), and store the decision file's objective (`set_objective`; `unknown_outcomes` must be empty).
 3. Save the chosen structure in the decision file, and commit it only when the brief's `commits` names a branch. Then offer to change the app to send the new hash ([Wire it into the app](tasks.md#wire-it-into-the-app)), which stops for the person before touching their code. Evaluations start recording the new hash once the app sends it.
 

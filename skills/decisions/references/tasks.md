@@ -6,32 +6,32 @@ Before each task, list tools, find the one whose description matches the goal, a
 
 ## Define a structure
 
-**Goal:** Create the decision JSON in the caller's repo and obtain its structure hash. How to design it (questions or attributes, which aggregation): [Design a structure](design.md).
+**Goal:** Create the decision file in the caller's repo and obtain its structure hash. How to design it (questions or attributes, which aggregation): [Design a structure](design.md).
 
-**Find:** No tool writes the structure. Find “Validate and hash a decision structure” (`hash_structure`, `POST /v1/structures/hash`); this public check needs no key and writes nothing. Read the `inputSchema` first.
+**Find:** No tool writes the file. Find “Validate a decision file” (`validate_decision`, `POST /v1/validate`); the API check needs no key and writes nothing. Locally, `mb validate <file>` checks a decision file or a bare structure file (`--local` skips the API). Read the `inputSchema` first.
 
-**Shape:** The body is the structure itself:
+**Shape:** The file is the decision file `{decision_id, structure, objective?}` (`decision_id` is optional to validate), and its `structure` is:
 
 - `questions`: `{type:"noul", instructions, criteria?:{true?,false?}, reads?:["state.<key>", "state.<key>.<key>", …]}` (object paths at any depth, sent nested as in the state; array indexes such as `state.items[0]` are a 400, and so is an entry repeated or containing another, like `state.order` with `state.order.id`). `noul` is the only kind today; its answer is P(true). `instructions` is a string, object or array, sent as written. Without `reads` a question sees the whole state.
 - `attributes` (optional): values the caller sends per call in `attribute_values`, never shown to the engine: `{type:"string", enum, default?, source?}`, `{type:"number", minimum?, maximum?, default?, source?}` or `{type:"boolean", default?, source?}`.
 - `aggregations` (optional): `weighted_mean` (positive weights or none, `invert`), `logistic` (`bias`, signed `weight` on every input), `min`/`max`/`product`/`noisy_or` (`invert`), checks `all`/`any` (`gte`/`gt`/`lte`/`lt`, default ≥ 0.5), and outcome types `bands` (`input`, `below`, ascending `cuts:[{at,outcome}]`, `abstain?`), `rules` (`rules:[{when,outcome}]`, `else`) and `match` (`input`, `cases`, `else?`, `abstain?`). Numeric and check types list `inputs:[{name,...}]`; `bands`/`match` read `input`, and `rules` read their conditions. Every reference (`inputs[].name`, `input`, a rule's `name`, `result`) is a path: `questions.<name>`, `attributes.<name>` or `aggregations.<name>`.
 - `result`: the final feature's path (`questions.x`, `attributes.x` or `aggregations.x`).
 
-**Gotchas:** Names are lowercase slugs, unique across questions, attributes and aggregations. A bare name, a path under the wrong root or an unknown name where a reference goes is a 400 naming the path; the map keys, `answers`, `aggregations` and claims stay bare. Hashing ignores key order, NFC normalization of instructions, criteria and attribute sources, the order of `reads` and `inputs`, and spelled-out defaults (`invert:false`, `gte:0.5`, empty `criteria`, all-1 `weighted_mean` weights). Read paths, string enum labels/defaults and label comparisons stay exact, since customer keys and values are not normalized. Any other edit, including a weight, threshold or cut point, is a new hash. Each question also gets its own hash (its definition without its name). Cycles between aggregations are a 400 that names the cycle. There is no weights hash.
+**Gotchas:** Names are lowercase slugs, unique across questions, attributes and aggregations. A bare name, a path under the wrong root or an unknown name where a reference goes is a 400 naming the path; the map keys, `answers`, `aggregations` and claims stay bare. Hashing ignores key order, NFC normalization of instructions, criteria and attribute sources, the order of `reads` and `inputs`, and spelled-out defaults (`invert:false`, `gte:0.5`, empty `criteria`, all-1 `weighted_mean` weights). Read paths, string enum labels/defaults and label comparisons stay exact, since customer keys and values are not normalized. Any other edit, including a weight, threshold or cut point, is a new hash. Each question also gets its own hash (its definition without its name). The response also returns `canonical`, the exact text that was hashed, and `warnings` (`UNUSED_FEATURE`: something the result never reaches); [Version hashes](https://docs.moonbounce.ai/learn/version-hashes) has the algorithm. Cycles between aggregations are a 400 that names the cycle. There is no weights hash.
 
 **Done when:** The JSON is in the caller's repo and the checking tool returns its structure hash.
 
 ## Register it
 
-**Goal:** Make a structure available to evaluations by hash in the chosen environment.
+**Goal:** Register the decision file's structure as a version of the decision, so evaluations can name it by hash.
 
-**Find:** Find “Stores a structure under the decision so evaluations can name it in `moonbounce.structure_hash`” (`register_structure`, `POST /v1/decisions/{decision_id}/structures`). Read its `inputSchema` first.
+**Find:** Find “Register a decision's version” (`register_decision`, `POST /v1/decisions`; `mb register` from a repo). Read its `inputSchema` first.
 
-**Request:** The body is the structure itself, with the decision id in the path. 201 when this call registered it, 200 when it already existed; the response carries `structure_hash` and per-question hashes in `question_hashes`, not the structure object. A normal evaluation with an inline structure also registers it on first sight; a dry run does not.
+**Request:** The body is the decision file `{decision_id, structure, objective?}`; an unknown `decision_id` creates the decision. 201 when this call added a version, 200 when that structure was already registered; the response is `{decision_id, version: {structure_hash, number, question_hashes, created_at}, created, objective?}`, not the structure object. `number` is the version's number under the decision (1, 2, 3 in registration order); the hash is its identity. `objective` absent leaves the stored objective alone, `null` clears it, and a value is stored as a new revision in the key's environment when it differs (the response's `objective` says `{revision, created}`). A normal evaluation with an inline structure also registers it on first sight; a dry run does not.
 
 **Gotchas:** First registration in an environment creates the engine binding; the checked deployment selected Jev at revision 1. A backtest does not register its candidate.
 
-**Done when:** Registration succeeds and the structure hash is available for that decision in the intended environment.
+**Done when:** Registration succeeds and the version's hash and number are returned for that decision.
 
 ## Evaluate
 
@@ -194,11 +194,11 @@ Fresh evaluate and `import_examples` responses always include `cost`. Single-ite
 
 **Goal:** Find existing decisions and inspect what was registered or evaluated.
 
-**Find:** `list_decisions`, `list_structures`, `list_evaluations`, `get_structure` and `get_evaluation` have descriptions saying “Reads only.” Read the discovered schemas first.
+**Find:** `list_decisions`, `get_decision`, `list_versions`, `get_version`, `list_evaluations` and `get_evaluation` have descriptions saying “Reads only.” Read the discovered schemas first.
 
-**Request:** `list_decisions`, `list_structures` and `get_structure` accept either `decisions:evaluate` or `decisions:develop`; evaluation reads require `decisions:evaluate`. Lists accept `limit` (1–100, default 50) and `cursor`. Follow `next_cursor` while `has_more` is true. Evaluation filters include `item_id`, `assignment_mode` and inclusive `since` / exclusive `until`.
+**Request:** `list_decisions`, `get_decision`, `list_versions` and `get_version` accept either `decisions:evaluate` or `decisions:develop`; evaluation reads require `decisions:evaluate`. Lists accept `limit` (1–100, default 50) and `cursor`. Follow `next_cursor` while `has_more` is true. Evaluation filters include `item_id`, `assignment_mode` and inclusive `since` / exclusive `until`.
 
-**Gotchas:** Decisions appear through a binding in the key's environment. Structure counts and lists use the org's shared registry for those decisions. Evaluations are environment-specific; lists omit content. `list_structures` items carry each structure's question hashes in `question_hashes`; `list_evaluations` items carry `status`, `value`, `outcome` and `version.structure_hash`. `register_structure` returns hashes without the structure; `get_structure` returns it as `structure`, in authored key order, with its hashes. `get_evaluation` returns the evaluate shape plus `assignment_mode`, the recorded `cost` when a usage row exists, and `content: {state, attribute_values?}` when stored, otherwise `content: null`. A stored JSON null is `{state: null}` inside `content`. The internal `store_state` setting defaults to true. `list_feedback` remains HTTP only.
+**Gotchas:** Decisions and versions belong to the whole organization: test and production keys list the same ones, `created_at` is when they were first registered, and a decision registered in production can be listed by a test key before it has a binding there. Evaluations are environment-specific; lists omit content. `list_decisions` and `get_decision` items carry `version_count` and the `newest_version`; `list_versions` items carry each version's `structure_hash`, `number` and question hashes in `question_hashes`, newest number first; `list_evaluations` items carry `status`, `value`, `outcome` and `version.structure_hash`. `register_decision` returns hashes without the structure; `get_version` takes the hash or the number as `ref` and returns the structure as `structure`, in authored key order, with its hashes. `get_evaluation` returns the evaluate shape plus `assignment_mode`, the recorded `cost` when a usage row exists, and `content: {state, attribute_values?}` when stored, otherwise `content: null`. A stored JSON null is `{state: null}` inside `content`. The internal `store_state` setting defaults to true. `list_feedback` remains HTTP only.
 
 **Done when:** The requested page or record is read in the intended environment; fetch a definition or state only when the task needs it.
 

@@ -68,7 +68,7 @@ Keep a candidate when both of these hold:
 
 The first structure that validates and scores is the first kept version: it is the base the next candidate must beat. `loss_report` never accepts a candidate without a base, so don't wait for the target to keep a first version. A target, when the person set one, is a reference point: it is neither when to keep nor when to stop.
 
-Register each kept version (`register_structure`), so its hash works as a base and at import, and save it in the decision file. When the brief's `commits` names a branch, commit it there with its structure hash and loss per case in the message. The next candidate starts from the last kept version, or from a dropped one when the author judges that one closer.
+Register each kept version (`register_decision`), so its hash works as a base and at import, and save it in the decision file. When the brief's `commits` names a branch, commit it there with its structure hash and loss per case in the message. The next candidate starts from the last kept version, or from a dropped one when the author judges that one closer.
 
 Engines answer the same case differently from run to run. When a verdict hinges on one or two cases, score both versions twice. Small sets are only indicative.
 

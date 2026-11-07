@@ -134,11 +134,11 @@ Every label must be an outcome the brief's Outcomes section names, so the struct
 
 ### `structure`
 
-Brief a fresh author: "Read `<design guide>` first. Then write the structure for the decision in `<brief>` at `<decision file>`, using `<examples>`. Make facts attributes and judgments questions: use the attribute values the brief's Inputs list, and in `<notes>` propose any other fact in the state you would make an attribute. State the brief's criteria in each question rather than wording drawn from particular cases. Read only paths the brief says the app always sends. Map every clause in the brief to the question or rule that applies it, in `<notes>`. Validate with `hash_structure`."
+Brief a fresh author: "Read `<design guide>` first. Then write the structure for the decision in `<brief>` at `<decision file>`, using `<examples>`. Make facts attributes and judgments questions: use the attribute values the brief's Inputs list, and in `<notes>` propose any other fact in the state you would make an attribute. State the brief's criteria in each question rather than wording drawn from particular cases. Read only paths the brief says the app always sends. Map every clause in the brief to the question or rule that applies it, in `<notes>`. Validate the decision file with `validate_decision` (or `mb validate <decision file> --local`)."
 
 When the author proposes making a fact in the state an attribute that the brief's Inputs don't list, ask the person first: today the app must send it in `attribute_values`. With a yes, add it to the Inputs and copy the values into the dataset's lines ([Facts are attributes](design.md#facts-are-attributes-judgment-is-a-question)); with a no, the author keeps a question.
 
-Then register it (`register_structure`) in the environment the decision will run in. The first registration creates the decision and its binding from the deployment's default. Then do these in order:
+Then register it (`register_decision`, or `mb register`) in the environment the decision will run in. The first registration creates the decision and its binding from the deployment's default. Then do these in order:
 
 1. Set the binding (`set_binding`) to the engine and model production will run. When the decision already has evaluations in this environment, it is in use: a binding change moves its live traffic, so stop and ask the person first.
 2. Store the objective (`set_objective`), and check that `unknown_outcomes` is empty.
