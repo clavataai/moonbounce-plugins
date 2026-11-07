@@ -7,7 +7,7 @@ How to turn a brief into questions, attributes and aggregations. The author read
 Read each clause of the brief and sort what it depends on:
 
 - **A fact the app already has** (an amount, a count, a number of days, a flag, a category): make it an **attribute**. Rules, `bands` and checks compare it directly (`{"name": "attributes.days_since_delivery", "gt": 30}`), with no model call: exact, free, the same every time.
-- **A judgment about content** (was the item defective? does the message say enough? is this a change of mind?): make it a **question**, one judgment each, answered by the model as P(true).
+- **A judgment about content** (was the item defective? does the message say enough? is this a change of mind?): make it a **question**, one judgment each, answered by the model (P(true) for a yes/no question).
 
 Never ask a question about something the app can compute. "Was the request more than 30 days after delivery?" spends an model call to get a probability about arithmetic, and it can be wrong; `days_since_delivery` as an attribute can't be.
 
@@ -36,20 +36,49 @@ A fact can become an attribute at any point: while writing the brief, when the a
 - **`reads` only what it needs:** questions that read the same fields share one model call, and a field nobody reads is never sent. Every path a question reads must be in each call's `state` (a 400 otherwise), so read a field that can be missing through its parent: `state.order`, not `state.order.tracking`.
 - **Observe first:** a question no aggregation reads is answered and recorded but moves nothing, so a new one can be watched on real traffic before it counts.
 
+## Choose the kind of question
+
+| The judgment is | Kind | Its answer |
+| --- | --- | --- |
+| Yes or no, one condition | `noul` | P(true), 0 to 1 |
+| One category from a fixed set (which team, which intent, which reason) | `choice`: `criteria` maps each of 2 to 255 options to its description (or null when the name says enough) | the chosen option, every option's probability, and `confidence` |
+| A graded quality on an ordered rubric (how severe, how urgent, how well it meets a bar) | `score`: `criteria` lists 2 to 10 level descriptions, lowest first; a level is its position from 0 | the score (Σ level × probability, 0 to the top level), each level's probability, and `confidence` |
+
+- **Give a choice a catch-all** (`"other": null`) unless its categories cover every case: the model always picks one option, so a case that fits none is forced into one, often with high confidence.
+- **Independent conditions stay separate nouls.** "Is it a refund request?" and "Is the customer angry?" can both be true: two nouls. Categories that exclude each other ("billing", "shipping", "technical") are one choice: three nouls can all say yes, or all say no, and the rules then route by whichever comes first.
+- **A choice routes with `match`:** `{"type": "match", "input": "questions.team", "cases": {"billing": "to_billing"}, "else": "to_other"}` (`else` unless the cases cover every option). An option's probability is a 0–1 value a check or cut reads with `option`: `{"name": "questions.team", "option": "billing", "gte": 0.8}`.
+- **Route an unsure answer** before routing the answer, in one `rules` (a rule can't fall through to a `match`): a first rule on `confidence` (1 when one option holds all the probability, 0 when they're even), then one `is` rule per option:
+
+  ```json
+  "route": {
+    "type": "rules",
+    "rules": [
+      { "when": { "name": "questions.team", "confidence": true, "lt": 0.5 }, "outcome": "escalate" },
+      { "when": { "name": "questions.team", "is": "billing" }, "outcome": "to_billing" },
+      { "when": { "name": "questions.team", "is": "shipping" }, "outcome": "to_shipping" }
+    ],
+    "else": "to_other"
+  }
+  ```
+- **A score reads as its number,** 0 to the top level, like a number attribute: a check, rule or cut names its threshold (`{"name": "questions.severity", "gte": 2}`), since a score has no default one, and `weighted_mean`, `min`, `max`, `product` and `noisy_or` refuse it (`logistic` takes it as a number). Read one level's probability with `option` (`"2"`). `match`, `is` and `in` see its most likely level, as a string (`"2"`).
+- **Option names** are kept exact and can't be integers (`"0"`, `"12"`); write a word. Their order doesn't count. A score's levels keep their order, which numbers them.
+- **Changing kind is a new question.** A noul turned into a choice, or options added or renamed, gets a new question hash: its answers aren't reused (the model is asked again on every case) and `expected_answer` corrections on the old question don't carry. Outcome labels do.
+
 ## Choose the combination
 
 | The policy says | Use |
 | --- | --- |
 | Ordered clauses, exceptions, "X wins over Y" | `rules`: the first true rule names the outcome, `else` the rest. Conditions compare attributes and questions directly, and combine with `all`, `any` and `not`. The usual choice for a written policy. |
-| A score to rank or cut | `weighted_mean` (relative, positive weights; `invert` for "not"), then `bands` to cut it into outcomes. It ranks well but is not a probability, and it can't veto. |
+| A value to rank or cut | `weighted_mean` (relative, positive weights; `invert` for "not"), then `bands` to cut it into outcomes. It ranks well but is not a probability, and it can't veto. |
 | Any one of several reasons is enough | `noisy_or` when the reasons are independent, `max` when they overlap. An average would dilute a single strong reason. |
 | All of several must hold | `product` when independent, `min` when they overlap. |
-| One thing vetoes the rest | `min` over the score and the inverted veto. |
+| One thing vetoes the rest | `min` over the value and the inverted veto. |
 | Several yes/no thresholds | `all` or `any` (each input with `gte`, `gt`, `lte` or `lt`; default ≥ 0.5). They output 1 or 0, so they nest anywhere. |
-| A label straight to an outcome | `match` on a string attribute or another outcome. |
+| A label straight to an outcome | `match` on a choice question, a string attribute or another outcome. |
+| An unsure choice or score goes to a person | A first rule on the question's `confidence` (`lt`), naming the safe outcome. A `noul` has no `confidence`. |
 | Weights fitted on labeled data | `logistic` (signed weights and a `bias`). Never guess its numbers: a guessed logistic looks more precise than it is, and fitting isn't offered yet. |
 
-Group features that share a reason before weighing them: two independent ways to be "our failure" go in one `noisy_or`, and that group is one input to the score. Otherwise a new question that says "no" on most cases drags every case down.
+Group features that share a reason before weighing them: two independent ways to be "our failure" go in one `noisy_or`, and that group is one input to the `weighted_mean`. Otherwise a new question that says "no" on most cases drags every case down.
 
 **Abstaining.** When a needed answer is missing, `bands` and `match` give their `abstain` outcome, and a rule with `{"name": "questions.x", "abstained": true}` catches it before an unknown stops the rules. Point both at the outcome the brief says is safe when the decision can't tell (often `escalate`). `weighted_mean` drops a missing input and averages the rest; `logistic`, `min`, `max`, `product` and `noisy_or` become unknown.
 
