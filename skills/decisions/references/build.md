@@ -212,4 +212,4 @@ Then offer to wire the decision into the app ([Wire it into the app](tasks.md#wi
 A stage can send the flow back. Set `stage` to the earlier stage and re-run the stages after it, in order.
 
 - **A wrong or missing clause found at `refine` or `blind_check`:** go back to `brief`. Then re-label the cases the change touches at `labels`, check the structure's clause map, and go back to `refine`.
-- **A severity the person wants changed:** go back to `objective`. Store the new objective, then re-score the last kept version. Reports under the old `effective_hash` no longer compare.
+- **A severity the person wants changed:** go back to `objective`. Store the new objective, then re-score the last kept version. Reports under the old `effective_hash` no longer compare. A new target alone keeps it: only `target_met` changes.
