@@ -161,6 +161,7 @@ The loss matrix is a heatmap of where the loss comes from: the loss the objectiv
 - **Right cells:** `✓` and the count, from `confusion` (the cells whose `got` is the `expected`).
 - **Columns:** every outcome, plus `none` when some cases got no outcome (`got: null`).
 - With more than about six outcomes, list the shaded cells instead of drawing the whole matrix.
+- `confusion` keeps the 400 largest cells. When `confusion_total` is larger, a cell missing from it isn't zero: say the matrix is cut. Take a missing wrong cell's count from `by_mistake` when it's there. Work out a missing right cell's count from `outcomes` (its `recall` × how often it was expected, rounded to a whole number).
 
 The priority row shows the outcome the objective's `priority` names (with two outcomes), or the outcome whose mistakes cost most. Add a `Target` row only when the person set one, with `target_met`. Show `excluded` only when it isn't empty. In the improve flow, one table per label source that was scored, the deciding one first, named in its title. Keep the version numbers (v1, v2, …) the same in every report, the decision file's commits and `work/runs.json`.
 
