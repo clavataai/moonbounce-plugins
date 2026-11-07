@@ -12,7 +12,7 @@ The person has a policy and some data, or none. The brief is where the first str
 | `refine` | The refine loop over the dataset | Accepted versions, loss reports | **Stop:** the user says it's good enough |
 | `red_team` | A red team (another model when the user has one) attacks the version `refine` settled on; the round is labeled blind, settled with the user, scored once and joins the dataset | `work/red-<n>.jsonl`, dataset additions | **Stop:** a round finds nothing wrong, or after three rounds. A round that breaks the version goes back to `refine` first, then attacks the new version |
 | `blind_check` | An agent that has seen neither the structure nor the examples writes a fresh set from the frozen brief, by the same grid; scored once | `moonbounce/<id>.blind.jsonl` | **Stop:** the user accepts the result. Failures join the training set and the flow returns to `refine`, then `red_team`; the next freeze gets a fresh blind set |
-| `import` | With the person's go-ahead, `import_examples` stores the dataset and runs the engines, so previews and the improve flow can use it | Server copy of the dataset | Every example stored, except ones the person agreed to leave out (a retryable failure sent again in a new call; one with `retryable: false` fixed, dropped or taken to the person), and `loss_report` over the runs matches the last scores; the build flow ends |
+| `import` | With the person's go-ahead, `import_examples` stores the dataset and runs the model, so previews and the improve flow can use it | Server copy of the dataset | Every example stored, except ones the person agreed to leave out (a retryable failure sent again in a new call; one with `retryable: false` fixed, dropped or taken to the person), and `loss_report` over the runs matches the last scores; the build flow ends |
 
 At a **Stop**, show the person what the stage left and wait for their answer before moving on. When a stage is done, set the brief's `stage` to the next one and its `date` to today, and commit only when the brief's `commits` names a branch.
 
@@ -89,7 +89,7 @@ Write the answers into the decision file's `objective` ([Set the objective](task
 
 Write the brief from the policy and the conversation. Number the clauses. Ask the person about every gap rather than guessing: an unclear clause here becomes a disagreement at `labels`.
 
-When a clause depends on a fact the app already has (an amount, a count, days, a flag, a category), you can raise here making it an attribute rather than having the engine judge it ([Facts are attributes](design.md#facts-are-attributes-judgment-is-a-question)), and note in the Inputs what the app would send. It doesn't have to be settled now: the author or the refine loop can propose it later.
+When a clause depends on a fact the app already has (an amount, a count, days, a flag, a category), you can raise here making it an attribute rather than having the model judge it ([Facts are attributes](design.md#facts-are-attributes-judgment-is-a-question)), and note in the Inputs what the app would send. It doesn't have to be settled now: the author or the refine loop can propose it later.
 
 When the person has labeled data already, read it, and its reasons, before you write the clauses. Each reason is the policy as someone applied it, so it should map to a clause. Act on what doesn't:
 
@@ -138,9 +138,9 @@ Brief a fresh author: "Read `<design guide>` first. Then write the structure for
 
 When the author proposes making a fact in the state an attribute that the brief's Inputs don't list, ask the person first: today the app must send it in `attribute_values`. With a yes, add it to the Inputs and copy the values into the dataset's lines ([Facts are attributes](design.md#facts-are-attributes-judgment-is-a-question)); with a no, the author keeps a question.
 
-Then register it (`register_decision`, or `mb register`) in the environment the decision will run in. The first registration creates the decision and its binding from the deployment's default. Then do these in order:
+Then register it (`register_decision`, or `mb register`) in the environment the decision will run in. The first registration stores the deployment's default model as the environment's model setting, at revision 1. Then do these in order:
 
-1. Set the binding (`set_binding`) to the engine and model production will run. When the decision already has evaluations in this environment, it is in use: a binding change moves its live traffic, so stop and ask the person first.
+1. Set the model (`set_model`) to the one production will run (`list_models` names the choices). When the decision already has evaluations in this environment, it is in use: a model change moves its live traffic, so stop and ask the person first.
 2. Store the objective (`set_objective`), and check that `unknown_outcomes` is empty.
 3. Run one dry-run `evaluate` on one case.
 
@@ -192,18 +192,18 @@ Never revise against the blind set, and never show it to the author.
 
 ### `import`
 
-**Stop** first: tell the person what the import does (it stores every example as an evaluation in this environment, runs the engines once, and makes the labels the decision's cases for previews and the improve flow), what it will cost (about one dry run of the dataset), and wait for their go-ahead.
+**Stop** first: tell the person what the import does (it stores every example as an evaluation in this environment, runs the models once, and makes the labels the decision's cases for previews and the improve flow), what it will cost (about one dry run of the dataset), and wait for their go-ahead.
 
 Store the dataset and the blind set, each with its own import: `import_examples` with up to 200 examples a call, the file's lines as they are (`jq -cs '_nwise(200)' moonbounce/<decision_id>.examples.jsonl` prints one chunk's `examples` per line), the last kept structure by its registered hash, and an Idempotency-Key per call ([Add labeled data](tasks.md#add-labeled-data)).
 
 How failures come back:
 
-- A 400 refuses the whole call before any engine call. Fix or leave out the example it names.
+- A 400 refuses the whole call before any model call. Fix or leave out the example it names.
 - Otherwise failures are per example: the rest are stored. Read each failure's `error.retryable`:
   - **`true`** (an outage, or not started in time): send it again in a new call with a new key.
-  - **`false`**: sending it again fails the same way. The cause may be the content (the engine refused or couldn't read it) or the engine (an answer it couldn't use, a model other than the binding's), and `error.code` and `message` often don't say which. Don't change or drop the example on your own: show the person the failed items with their `error.code`, `message` and the binding (`get_binding`), and fix, drop or reconfigure as they decide.
+  - **`false`**: sending it again fails the same way. The cause may be the content (the model refused or couldn't read it) or the model (an answer it couldn't use, a model other than the setting's), and `error.code` and `message` often don't say which. Don't change or drop the example on your own: show the person the failed items with their `error.code`, `message` and the model setting (`get_model`), and fix, drop or reconfigure as they decide.
 
-Read each import's `loss_report` over its calls' `run_id`s. The dataset's loss per case should match the last refine score, and the blind set's the `blind_check` score, within noise. A permanent failure still counts in its run as a mistake (`failed` in the report), even after you drop the example from the file: compare without those. A fixed example sent again, under the same `item_id` and the same version (structure, engine and binding revision), replaces its failure when you list its run beside the original. After a binding change, runs of the two versions can't be listed together (400 `RUNS_MIXED`): compare the new runs alone. A difference means the imported examples aren't what was scored: check the file and the structure hash.
+Read each import's `loss_report` over its calls' `run_id`s. The dataset's loss per case should match the last refine score, and the blind set's the `blind_check` score, within noise. A permanent failure still counts in its run as a mistake (`failed` in the report), even after you drop the example from the file: compare without those. A fixed example sent again, under the same `item_id`, the same version and the same model, replaces its failure when you list its run beside the original. After a model change, runs of the two versions can't be listed together (400 `RUNS_MIXED`): compare the new runs alone. A difference means the imported examples aren't what was scored: check the file and the structure hash.
 
 Then offer to wire the decision into the app ([Wire it into the app](tasks.md#wire-it-into-the-app)), which stops for the person before changing their code. Set the brief's `stage` to `done`. Later work on this decision is the improve flow.
 

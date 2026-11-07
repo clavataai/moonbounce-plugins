@@ -6,16 +6,16 @@ How to turn a brief into questions, attributes and aggregations. The author read
 
 Read each clause of the brief and sort what it depends on:
 
-- **A fact the app already has** (an amount, a count, a number of days, a flag, a category): make it an **attribute**. Rules, `bands` and checks compare it directly (`{"name": "attributes.days_since_delivery", "gt": 30}`), with no engine call: exact, free, the same every time.
-- **A judgment about content** (was the item defective? does the message say enough? is this a change of mind?): make it a **question**, one judgment each, answered by the engine as P(true).
+- **A fact the app already has** (an amount, a count, a number of days, a flag, a category): make it an **attribute**. Rules, `bands` and checks compare it directly (`{"name": "attributes.days_since_delivery", "gt": 30}`), with no model call: exact, free, the same every time.
+- **A judgment about content** (was the item defective? does the message say enough? is this a change of mind?): make it a **question**, one judgment each, answered by the model as P(true).
 
-Never ask a question about something the app can compute. "Was the request more than 30 days after delivery?" spends an engine call to get a probability about arithmetic, and it can be wrong; `days_since_delivery` as an attribute can't be.
+Never ask a question about something the app can compute. "Was the request more than 30 days after delivery?" spends an model call to get a probability about arithmetic, and it can be wrong; `days_since_delivery` as an attribute can't be.
 
 **How, today.** An attribute's value comes from the caller: the app sends `attribute_values` with each call, beside `state`, so a fact the app also puts in `state` is sent twice. Declare each attribute with its type and range (`{"type": "number", "minimum": 0}`, a `boolean`, or a `string` with its `enum`), and give a question's `reads` only the fields its judgment needs. Every dataset line then carries `attribute_values` too: when the facts are already in each line's `state`, copy them over with jq, for example `jq -c '.attribute_values = {days_since_delivery: .state.order.days_since_delivery}' <file>`.
 
 Moving a fact from a question to an attribute changes what the app must send, so ask the person before relying on it. It can come up at any point: while writing the brief, when the author writes the structure, or in the refine loop when a question about a fact keeps getting it wrong. The brief doesn't have to have named it. Moonbounce plans attributes that read a state path themselves (`"from": "state.order.total"`), which would end the duplication; until then, the app sends them.
 
-**Keep facts out of questions.** A question sees only the state paths in its `reads`, so leave out every field that is an attribute: an engine that also sees the numbers may weigh them its own way, against the exact comparisons in your rules. A path a question reads must be present on every call, so an optional field is read through its parent, and the question then sees the parent's other fields too. When an optional text field shares a parent with facts (a tracking line inside `order`, beside the totals), ask whether the app can send the text under a key of its own (`state.delivery`, always present, holding an optional `tracking`), so the question reads just that.
+**Keep facts out of questions.** A question sees only the state paths in its `reads`, so leave out every field that is an attribute: a model that also sees the numbers may weigh them its own way, against the exact comparisons in your rules. A path a question reads must be present on every call, so an optional field is read through its parent, and the question then sees the parent's other fields too. When an optional text field shares a parent with facts (a tracking line inside `order`, beside the totals), ask whether the app can send the text under a key of its own (`state.delivery`, always present, holding an optional `tracking`), so the question reads just that.
 
 **Keep a question when** the fact is only in free text (a tracking line in prose, a date the customer wrote), or when the app would have to judge it to compute it.
 
@@ -23,7 +23,7 @@ Moving a fact from a question to an attribute changes what the app must send, so
 
 - **Narrow:** one judgment per question, with `criteria` saying what counts as true and false. A question that bundles two judgments can't be blamed or fixed apart.
 - **From the brief, not the cases:** state the clause's criterion, not wording drawn from particular examples.
-- **`reads` only what it needs:** questions that read the same fields share one engine call, and a field nobody reads is never sent. Every path a question reads must be in each call's `state` (a 400 otherwise), so read a field that can be missing through its parent: `state.order`, not `state.order.tracking`.
+- **`reads` only what it needs:** questions that read the same fields share one model call, and a field nobody reads is never sent. Every path a question reads must be in each call's `state` (a 400 otherwise), so read a field that can be missing through its parent: `state.order`, not `state.order.tracking`.
 - **Observe first:** a question no aggregation reads is answered and recorded but moves nothing, so a new one can be watched on real traffic before it counts.
 
 ## Choose the combination
@@ -96,8 +96,8 @@ The refund policy's facts (days since delivery, refunds in the last year, the or
 }
 ```
 
-`our_failure` reads `state.order` to get the optional tracking line, so the engine also sees the order's numbers; with the tracking line under a key of its own, it would read that and the message only.
+`our_failure` reads `state.order` to get the optional tracking line, so the model also sees the order's numbers; with the tracking line under a key of its own, it would read that and the message only.
 
-Read top down: an unclear message, or one the engine couldn't answer about, escalates; our failure with a reason for caution escalates; our failure otherwise grants; a change of mind past 30 days denies; anything left escalates. Only two engine questions run per request, and every number in the policy is an exact comparison. The brief's clause map in `work/notes.md` says which rule applies which clause. The policy's clause about a late delivery counting from the promised date is one the app can compute (days since the promised date) and send as `days_since_delivery`; if it can't, a question reading `state.order` (and so the tracking line, when there is one) judges it instead.
+Read top down: an unclear message, or one the model couldn't answer about, escalates; our failure with a reason for caution escalates; our failure otherwise grants; a change of mind past 30 days denies; anything left escalates. Only two model questions run per request, and every number in the policy is an exact comparison. The brief's clause map in `work/notes.md` says which rule applies which clause. The policy's clause about a late delivery counting from the promised date is one the app can compute (days since the promised date) and send as `days_since_delivery`; if it can't, a question reading `state.order` (and so the tracking line, when there is one) judges it instead.
 
 When `near_cuts` and `sweep_cut` apply to a structure like this, they apply to `bands`; a `rules` structure is tuned by its thresholds and the order of its rules, one change per candidate.

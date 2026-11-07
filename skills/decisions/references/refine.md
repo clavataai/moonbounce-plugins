@@ -13,14 +13,14 @@ Give the author the report's roll-ups and the worst cases it lists, and give it 
 
 ## Score a version
 
-Never score by hand, and never pass the results back yourself. Pass `run_id`s so the results stay out of your context. Over MCP, `evaluate` and `loss_report` take their request under `body`. [Score a dataset](tasks.md#score-a-dataset) has the full request shapes.
+Never score by hand, and never pass the results back yourself. Pass `run_id`s so the results stay out of your context. Over MCP, `create_run` and `loss_report` take their request under `body`. [Score a dataset](tasks.md#score-a-dataset) has the full request shapes.
 
 - **A dataset (the build flow, and the improve flow's synthetic cases).**
-  - Call `evaluate` with `items` and `moonbounce.dry_run: true`. Always use a dry run: a stored run would add evaluations of an unshipped version to the decision.
-  - Send the version's structure fields at the top level, or `moonbounce.structure_hash`, plus `moonbounce.decision_id`.
+  - Call `create_run` with `items` and `dry_run: true`. Always use a dry run: a stored run would add evaluations of an unshipped version to the decision.
+  - Send the version's structure fields at the top level of `body`, or its `structure_hash` there. `decision_id` is the path parameter; a run takes no `moonbounce` object.
   - Send up to 200 items per call, each as `{item_id, state, attribute_values?, expected, label_source}`. [Score a dataset](tasks.md#score-a-dataset) turns the repo's JSONL into 200-item chunks without reading it into your context.
 - **Stored cases (the improve flow).**
-  - Call `evaluate` with `cases` in place of `items`: either `{evaluation_ids}` from `list_cases`, or its filters with `limit` and `cursor`. Cases are always dry runs. A run takes at most 200 cases, so page larger sets and score both versions over the same pages.
+  - Call `create_run` with `cases` in place of `items`: either `{evaluation_ids}` from `list_cases`, or its filters with `limit` and `cursor`. Cases are always dry runs. A run takes at most 200 cases, so page larger sets and score both versions over the same pages.
   - Each case reuses the answers it stored for questions the version didn't change.
   - Filter by `label_source` to score human-labeled cases apart from the rest: real labels decide in the improve flow.
   - A `preview` is two of these runs and a `loss_report` in one call, over the newest 500 cases. It returns compact reports with no `run_id`s to page and no split by label source, so the improve flow scores with the runs themselves.
@@ -32,7 +32,7 @@ Never score by hand, and never pass the results back yourself. Pass `run_id`s so
 - **Look at the data.** Choose how much to read, and how, from [Looking at the data](#looking-at-the-data) below.
 - **Report.** Show the person each round in the [round report](../SKILL.md#what-the-person-sees) format, base beside candidate: loss per case and whether it was accepted (with `reasons` when not), `macro_f1`, the precision and recall of the outcome the objective's `priority` names (from `outcomes`), and the loss matrix (`by_mistake`), which shows where the weighted loss sits. Loss decides what is kept, because it is the objective the person set; the other numbers help them see what changed.
 - **Failures.**
-  - An item whose engines fail permanently (unreadable content, an engine refusal) is counted as its dearest mistake.
+  - An item whose model calls fail permanently (unreadable content, a model refusal) is counted as its dearest mistake.
   - A retryable failure (`NOT_STARTED`, `ENGINE_UNAVAILABLE`) is left out as `excluded.failed_transient`. Resend those items in a new run with a new Idempotency-Key, and list both runs.
 - **Same objective.** Store the objective (`set_objective`) before the first scoring. A new decision exists only once a structure is registered, so `set_objective` is a 404 until then: in the build flow, register the first structure first ([build.md](build.md#structure)). Without one, `loss_report` falls back to balanced losses. Compare only reports with the same `objective.effective_hash`.
 
@@ -70,13 +70,13 @@ The first structure that validates and scores is the first kept version: it is t
 
 Register each kept version (`register_decision`), so its hash works as a base and at import, and save it in the decision file. When the brief's `commits` names a branch, commit it there with its structure hash and loss per case in the message. The next candidate starts from the last kept version, or from a dropped one when the author judges that one closer.
 
-Engines answer the same case differently from run to run. When a verdict hinges on one or two cases, score both versions twice. Small sets are only indicative.
+Models answer the same case differently from run to run. When a verdict hinges on one or two cases, score both versions twice. Small sets are only indicative.
 
 ## From evidence to a change
 
 Read the report top down. Each roll-up points at one kind of change. Before re-weighting, regrouping or reordering rules, reread [Design a structure](design.md): the right aggregation often matters more than its numbers.
 
-| The report shows | Change | Spends engine calls |
+| The report shows | Change | Spends model calls |
 | --- | --- | --- |
 | `near_cuts`: wrong cases just below or above a cut whose expected outcome is the next band (`lower_it`, `raise_it`) | Sweep that cut (`sweep_cut`, below) and move it to the best point | No (numbers) |
 | `by_mistake`: the loss sits in one cell (`expected` → `got`) between two outcomes, with no single suspect question | Re-weight the inputs of the aggregation that separates those outcomes by hand (limits below), or reorder its rules | No (numbers) |
@@ -87,19 +87,19 @@ Read the report top down. Each roll-up points at one kind of change. Before re-w
 | `failed`: permanent failures | Check `reads` against the inputs the app always sends, and read an optional field through its parent | No |
 | A label that contradicts the brief | Fix the label or the brief, not the structure: go back to `labels` (build) or `brief_check` (improve) | No |
 
-**Numbers come before questions.** Cut points and weights cost nothing to change. A question change costs engine calls on every case. So try the numbers the report points at before rewriting a question, and change one thing per candidate so the report can tell you what it did. The one exception: in the build flow, where every re-score asks every question again, batch the cut moves that each passed `sweep_cut`'s `cross_validation` into one candidate.
+**Numbers come before questions.** Cut points and weights cost nothing to change. A question change costs model calls on every case. So try the numbers the report points at before rewriting a question, and change one thing per candidate so the report can tell you what it did. The one exception: in the build flow, where every re-score asks every question again, batch the cut moves that each passed `sweep_cut`'s `cross_validation` into one candidate.
 
 **A new attribute in the improve flow.** Stored cases replay the attribute values they were evaluated with, so a candidate that needs an attribute they lack fails on every case (`CONTENT_INVALID`). Score both versions over copies as `items` instead: page the cases with `list_cases` `include=content` (50 a page) and write two files with jq, with the same `item_id`s and each case's `expected` and `label_source`. The kept version's copy, `work/cases-base.jsonl`, has `{item_id, state: .content.state, expected, label_source}` plus `attribute_values` as stored (a version refuses an attribute it doesn't declare). Add `attribute_values` only when the case has them: `list_cases` leaves it out of `content` for a case with none, and `evaluate` refuses `attribute_values: null` with a 400. In jq, `+ (if .content.attribute_values then {attribute_values: .content.attribute_values} else {} end)`. The candidate's, `work/cases-with-<attribute>.jsonl`, adds the new attribute to `attribute_values` from each case's state. Score each version as a dry run over its own copy. Report it as a scoring of copies, not of the stored cases.
 
 ### Tune a cut with `sweep_cut`
 
-`sweep_cut` re-decides a run's labeled items from the answers the run already holds, at every point one cut could move to, and judges each point by the objective as `loss_report` does. It makes no engine calls and spends nothing. Over MCP it takes its request under `body`.
+`sweep_cut` re-decides a run's labeled items from the answers the run already holds, at every point one cut could move to, and judges each point by the objective as `loss_report` does. It makes no model calls and spends nothing. Over MCP it takes its request under `body`.
 
 - **Call it** with the run you just judged and the aggregation `near_cuts` names: `{run_ids, aggregation, at}`. `at` is the cut's current value. Leave `at` out to sweep each cut of the aggregation in turn, the others held where they are.
 - **Read each cut's `best`** (the response has one entry per swept cut in `cuts`). It is the lowest loss per case, with `change` (negative is better), and how many cases it `fixed` and `broken` against the current cut, with ids in `fixed_examples` and `broken_examples`. The cut moves only between its neighbours (`bounds`). `points` lists the loss across the range, so you can see whether the best is a broad valley or a single spike.
 - **Check `cross_validation` before trusting it.** `best` is in-sample: chosen on the same cases it is scored on. `cross_validation` chooses the cut again without each fold of item groups and scores it on that fold. When `holds` is false, the in-sample gain is likely noise: leave the cut where it is. It is null when fewer than 2 item groups on either side of the cut can move (cases the band below gets right, and cases the band above gets right): too little evidence to check what moving the cut costs. Treat null like `holds: false`. Stored cases are grouped by content; a dry run's items only by identical answers, so near-duplicates in a dataset can still make it optimistic.
 - **A 422 `REQUEST_TOO_LARGE`** means the runs are too many for the structure's size: sweep fewer runs at a time, or name one cut with `at`.
-- **Score it like any candidate.** Put `best.at` in the structure and score it, then keep it only when `loss_report` accepts it. In the improve flow a numbers-only candidate over `cases` makes no engine calls. In the build flow the re-score is a dry run that asks every question again, so batch the cuts that hold into one candidate.
+- **Score it like any candidate.** Put `best.at` in the structure and score it, then keep it only when `loss_report` accepts it. In the improve flow a numbers-only candidate over `cases` makes no model calls. In the build flow the re-score is a dry run that asks every question again, so batch the cuts that hold into one candidate.
 
 ### Set weights by hand, within limits
 
@@ -120,7 +120,7 @@ Each listed mistake in the report names its `fixing_flips`, the questions whose 
 How much a re-score costs depends on the flow:
 
 - **The build flow.** A dry run over `items` asks every question again, so batch the number changes the report supports into one candidate.
-- **The improve flow.** A run over `cases` reuses the stored answers for questions the candidate didn't change, so a numbers-only candidate makes no engine calls (`cost.engine_calls` stays 0).
+- **The improve flow.** A run over `cases` reuses the stored answers for questions the candidate didn't change, so a numbers-only candidate makes no model calls (`cost.model_calls` stays 0).
 
 **Budget.** Every run's response carries `cost` (money; `usd_micros` is millionths of a dollar). Before the loop, estimate and ask:
 

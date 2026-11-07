@@ -49,7 +49,7 @@ Record the structure hash you checked against and the date in the front matter.
 
 The baseline is the structure `brief_check` found, unless the person names another.
 
-If the baseline isn't registered (the repo's decision file, say), register it first (`register_decision`, or `mb register`). Score it on the cases with `evaluate` with `cases` and `loss_report`, with one run per label source: `cases.label_source` takes one value, so `human`, `unknown` and `synthetic` are three runs. Check `list_cases` with each `label_source` first and skip a source with no cases, since a case run that matches nothing is a 400 `NO_CASES`. A case run takes at most 200 cases: with more, page it (`cases.limit: 200`, then `cases.cursor` set to the last run's `cases.next_cursor`) and list every page's run on its side of `loss_report`. Keep the reports and run ids. The baseline is the first kept version, so it is what the first candidate must beat. If the objective isn't stored in this environment, or differs from the decision file's, store it first (`set_objective`).
+If the baseline isn't registered (the repo's decision file, say), register it first (`register_decision`, or `mb register`). Score it on the cases with `create_run` with `cases` and `loss_report`, with one run per label source: `cases.label_source` takes one value, so `human`, `unknown` and `synthetic` are three runs. Check `list_cases` with each `label_source` first and skip a source with no cases, since a case run that matches nothing is a 400 `NO_CASES`. A case run takes at most 200 cases: with more, page it (`cases.limit: 200`, then `cases.cursor` set to the last run's `cases.next_cursor`) and list every page's run on its side of `loss_report`. Keep the reports and run ids. The baseline is the first kept version, so it is what the first candidate must beat. If the objective isn't stored in this environment, or differs from the decision file's, store it first (`set_objective`).
 
 ### `cases`
 
@@ -77,8 +77,8 @@ Done when you can say how many usable cases there are, how many were dropped and
 
 Run [the refine loop](refine.md). Backtest each candidate against the last kept version (at first, the baseline) on the same cases, with the runs a preview would make but kept so you can page them:
 
-1. **The kept version**: `evaluate` with `cases`, its registered hash in `moonbounce.structure_hash`, and `refresh` set to its questions that the candidate rewords or drops. Reuse its runs from the last comparison only when the cases, the `refresh` set and the kept version are all the same and the runs haven't expired. A different `refresh` set changes which answers the base replays, so score the base again.
-2. **The candidate**: `evaluate` with `cases`, the structure inline, over the same cases.
+1. **The kept version**: `create_run` with `cases`, its registered hash in `structure_hash`, and `refresh` set to its questions that the candidate rewords or drops. Reuse its runs from the last comparison only when the cases, the `refresh` set and the kept version are all the same and the runs haven't expired. A different `refresh` set changes which answers the base replays, so score the base again.
+2. **The candidate**: `create_run` with `cases`, the structure inline, over the same cases.
 3. **Judge** with `loss_report`, the kept version's runs as `base`.
 
 With more than 200 cases, page both versions over the same pages, in the same order (the same filters, then each `next_cursor`), and list every page's run on its side. Pages are cut by label, not by version, so the two sides line up.
@@ -110,7 +110,7 @@ Red cases are synthetic: they are reported apart and never outweigh real labels 
 The person decides to ship. Then do these in order:
 
 1. Register the chosen structure in each environment it will run in (`register_decision`), and check the returned `version.structure_hash` against the one you scored.
-2. Check the binding (`get_binding`), and store the decision file's objective (`set_objective`; `unknown_outcomes` must be empty).
+2. Check the model in effect (`get_model`), and store the decision file's objective (`set_objective`; `unknown_outcomes` must be empty).
 3. Save the chosen structure in the decision file, and commit it only when the brief's `commits` names a branch. Then offer to change the app to send the new hash ([Wire it into the app](tasks.md#wire-it-into-the-app)), which stops for the person before touching their code. Evaluations start recording the new hash once the app sends it.
 
 Set the brief's `structure_hash` to the shipped hash and `stage` to `done`.
