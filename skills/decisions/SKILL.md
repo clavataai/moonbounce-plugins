@@ -137,8 +137,8 @@ Three messages always have the same shape, so the person can compare rounds and 
 
 The loss matrix is a heatmap of where the loss comes from: the loss the objective's weights put on each kind of wrong answer.
 
-- **Wrong cells** (from `by_mistake`): the count, `(was n)` when it differs from the base, and the cell's share of the candidate's loss (its `loss` ÷ the report's `loss`). Shade by that share: `█` 50% or more, `▓` 25 to 50%, `▒` 10 to 25%, `░` 5 to 10%, nothing below 5%. The shaded cells are where a change pays most.
-- **Right cells:** `✓` and the count, the row's `outcomes[].expected` minus its wrong cells.
+- **Wrong cells:** the count (from `confusion`), `(was n)` when it differs from the base's `confusion`, and the cell's share of the candidate's loss (its `by_mistake` `loss` ÷ the report's `loss`). Shade by that share: `█` 50% or more, `▓` 25 to 50%, `▒` 10 to 25%, `░` 5 to 10%, nothing below 5%. The shaded cells are where a change pays most.
+- **Right cells:** `✓` and the count, from `confusion` (the cells whose `got` is the `expected`).
 - **Columns:** every outcome, plus `none` when some cases got no outcome (`got: null`).
 - With more than about six outcomes, list the shaded cells instead of drawing the whole matrix.
 

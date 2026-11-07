@@ -26,14 +26,36 @@ Never score by hand, and never pass the results back yourself. Pass `run_id`s so
   - A `preview` is two of these runs and a `loss_report` in one call, over the newest 500 cases. It returns compact reports with no `run_id`s to page and no split by label source, so the improve flow scores with the runs themselves.
 - **Judge.**
   - Call `loss_report` with `{candidate: {run_ids}, base: {run_ids}}`. It returns `loss_per_case`, `accepted` and `reasons`, plus the roll-ups below.
-  - Page through the cases behind a roll-up with `cases: {filter: {kind: "wrong"}}`. The other kinds are `severe`, `changed`, `missing_criterion`, `{kind: "cell", expected, got?}`, `{kind: "question", question}` and `{kind: "near_cut", at}`.
+  - Page through the cases behind a roll-up with `cases: {filter: {kind: "wrong"}}` (or `cases: {filter, sample: n}` for a spread of n of them). The other kinds are `severe`, `changed`, `missing_criterion`, `{kind: "cell", expected, got?}`, `{kind: "question", question}` and `{kind: "near_cut", at}`.
   - Price base and candidate on the same items. Items the base lacks are counted in `excluded.no_base` and left out, so when the dataset grows, score the base on the new items too and add that run to its `run_ids`.
   - Runs expire after about a day. Keep the run ids with their structure hash and expiry (the build flow keeps them in `work/runs.json`), and re-score the last kept version when its runs have expired.
+- **Look at the data.** Choose how much to read, and how, from [Looking at the data](#looking-at-the-data) below.
 - **Report.** Show the person each round in the [round report](../SKILL.md#what-the-person-sees) format, base beside candidate: loss per case and whether it was accepted (with `reasons` when not), `macro_f1`, the precision and recall of the outcome the objective's `priority` names (from `outcomes`), and the loss matrix (`by_mistake`), which shows where the weighted loss sits. Loss decides what is kept, because it is the objective the person set; the other numbers help them see what changed.
 - **Failures.**
   - An item whose engines fail permanently (unreadable content, an engine refusal) is counted as its dearest mistake.
   - A retryable failure (`NOT_STARTED`, `ENGINE_UNAVAILABLE`) is left out as `excluded.failed_transient`. Resend those items in a new run with a new Idempotency-Key, and list both runs.
 - **Same objective.** Store the objective (`set_objective`) before the first scoring. A new decision exists only once a structure is registered, so `set_objective` is a 404 until then: in the build flow, register the first structure first ([build.md](build.md#structure)). Without one, `loss_report` falls back to balanced losses. Compare only reports with the same `objective.effective_hash`.
+
+## Looking at the data
+
+Read as much as you need to understand what the version gets wrong and why, and choose the way that fits. What you read stays in your context, and in the author's when you pass it on, so weigh what a read tells you against what it costs: a few dozen items are cheap, a few thousand crowd out everything else. These ways go from the least data to the most, and they combine:
+
+| Way | What it gives you | Good for |
+| --- | --- | --- |
+| **The roll-ups** (no items) | `loss_report`'s `confusion` and `by_mistake` (where the cases and the loss are), `by_question`, `near_cuts`, `missing_criterion`, `outcomes`. Rows of `by_mistake`, `by_question`, `near_cuts` and `missing_criterion` list a few example ids; for a `confusion` cell, page it with `{kind: "cell"}` | Seeing where to look before reading anything. Often enough to choose a numbers-only change |
+| **The rows behind a roll-up** | `loss_report` `cases: {filter}`: `wrong`, `{kind: "cell", expected, got}`, `{kind: "question", question}`, `{kind: "near_cut", at}`, `missing_criterion`, `severe`, `changed` (base and candidate differ), `right` or `all`, paged with `limit` and `cursor`. Each row is an id, its label, what each version gave and its loss | Every case in one mistake cell, or every case one question is blamed for |
+| **A spread sample** | `cases: {filter, sample: n}`: n of the filter's rows, split across expected outcomes (at least one each when n allows) and spread over how the candidate answered them, the same rows for the same report and filter | A representative look at a large filter, and a check of what the version gets right (`{kind: "right"}`, `sample: 5` to 10) so a change isn't fixing the wrong thing |
+| **The items themselves, by id** | In the build flow, rows carry `item_id`s: pick those lines from the dataset and the red rounds with jq (below). In the improve flow, rows over case runs carry evaluation ids: `list_cases` with `evaluation_ids` (comma-separated) and `include=content`, 50 a call | Reading the content, labels and reasons behind the rows you chose |
+| **Everything** | `{kind: "all"}` paged, the whole dataset file, or every case with `list_cases` paged | A small set (a few hundred items), or when nothing narrower answers your question. For a large one, a script that reads the file or the REST API keeps the bulk out of your context, and you read what it finds |
+
+Picking dataset lines by id (they come back in file order):
+
+```sh
+cat moonbounce/<decision_id>.examples.jsonl moonbounce/work/<decision_id>/red-*.jsonl 2>/dev/null |
+  jq -c --argjson ids '["<id>", "<id>"]' 'select(.item_id as $i | $ids | index($i))'
+```
+
+A usual round: the roll-ups, then the rows of the costliest cell or the most-blamed question, then those items by id, plus a spread sample of right rows. Give the author what you read that bears on the change, with labels and reasons, and the roll-ups. Read more whenever you're not sure why the version gets something wrong.
 
 ## Keep or drop a change
 
