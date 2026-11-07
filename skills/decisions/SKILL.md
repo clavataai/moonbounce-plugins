@@ -43,7 +43,7 @@ Review-queue tools serve human reviewers; agents rarely need them. These files s
 ## Five rules that bite
 
 1. Register a structure, or evaluate it inline once, before evaluating by its hash; an unknown hash is 404 `STRUCTURE_UNKNOWN`. A backtest does not register its candidate.
-2. Send the structure inline or as `moonbounce.structure_hash`, never both (400). Every path a question `reads` (`state.<key>`, `state.<key>.<key>`) must be in `state`, and every attribute without a default needs a value in `attribute_values` (400 `CONTENT_INVALID`).
+2. Send the structure inline or as `moonbounce.structure_hash`, never both (400). Every path a question `reads` (`state.<key>`, `state.<key>.<key>`) must be in `state`, and every attribute without a default needs a value: in `attribute_values`, or at its `from` path in `state` for a derived one, which never goes in `attribute_values` (400 `CONTENT_INVALID`).
 3. Read `status` before the result: `decided` carries `outcome`, `computed` carries `value`, `abstained` carries at most the `abstain` outcome.
 4. Feedback claims name a question (`expected_answer`) or an outcome the result can produce (`expected_outcome`), or approve/reject the returned outcome (`verdict`, never with `expected_outcome`), or flag broken content (`input_broken`); any other kind is a 400. Previews need a result that decides outcomes (`bands`, `rules` or `match`); a value result is 400 `OUTCOMES_INVALID`. For imported examples, address feedback by the example's evaluation `id` (`about.evaluation_id`); feedback by `item_id` binds to primary traffic only.
 5. Send an `idempotency-key` argument on writes except `fill_review_queue`, which takes none. A single-item dry run accepts one and ignores it, so a retried dry run runs, and is billed, again. A run (`create_run`) takes one. Reuse a key only to retry the same request.
@@ -157,4 +157,4 @@ Conventions:
 - On 403 `ORG_SUSPENDED` (`details.cause` is `unpaid` or `operator`) or `ORG_CLOSED`, stop and tell the person their team needs billing or support attention; don't retry.
 - Names: `structure` is the object, `structure_hash` and `question_hashes` its hashes, `decision_id` and `item_id` the caller's ids, `review_item_id` a review item (`inb_`). Counts are `claim_count`, claim arrays `claims`.
 - Paginated lists end with `next_cursor: null` and `has_more: false`.
-- Stored inputs read as `content: {state, attribute_values?}`, or `content: null` when not stored.
+- Stored inputs read as `content: {state, attribute_values?}`, or `content: null` when not stored. `get_evaluation`'s `attribute_values` are resolved (defaults and derived values included, the derived ones named in `derived_attributes`), so don't send them back as a call's `attribute_values`; `list_cases` content holds only what the caller sent.

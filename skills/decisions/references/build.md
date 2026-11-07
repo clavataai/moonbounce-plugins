@@ -89,7 +89,7 @@ Write the answers into the decision file's `objective` ([Set the objective](task
 
 Write the brief from the policy and the conversation. Number the clauses. Ask the person about every gap rather than guessing: an unclear clause here becomes a disagreement at `labels`.
 
-When a clause depends on a fact the app already has (an amount, a count, days, a flag, a category), you can raise here making it an attribute rather than having the model judge it ([Facts are attributes](design.md#facts-are-attributes-judgment-is-a-question)), and note in the Inputs what the app would send. It doesn't have to be settled now: the author or the refine loop can propose it later.
+When a clause depends on a fact the app already has (an amount, a count, days, a flag, a category), note it in the Inputs as an attribute derived from its state path, rather than a question the model judges ([Facts are attributes](design.md#facts-are-attributes-judgment-is-a-question)). The app sends nothing new: the attribute declares `from` and evaluate reads it from the state. It doesn't have to be settled now: the author or the refine loop can make the same change later.
 
 When the person has labeled data already, read it, and its reasons, before you write the clauses. Each reason is the policy as someone applied it, so it should map to a clause. Act on what doesn't:
 
@@ -134,9 +134,9 @@ Every label must be an outcome the brief's Outcomes section names, so the struct
 
 ### `structure`
 
-Brief a fresh author: "Read `<design guide>` first. Then write the structure for the decision in `<brief>` at `<decision file>`, using `<examples>`. Make facts attributes and judgments questions: use the attribute values the brief's Inputs list, and in `<notes>` propose any other fact in the state you would make an attribute. State the brief's criteria in each question rather than wording drawn from particular cases. Read only paths the brief says the app always sends. Map every clause in the brief to the question or rule that applies it, in `<notes>`. Validate the decision file with `validate_decision` (or `mb validate <decision file> --local`)."
+Brief a fresh author: "Read `<design guide>` first. Then write the structure for the decision in `<brief>` at `<decision file>`, using `<examples>`. Make facts attributes and judgments questions: a fact in the state becomes an attribute that declares `from` (its state path), and in `<notes>` list each one with the clause it serves. State the brief's criteria in each question rather than wording drawn from particular cases. Read only paths the brief says the app always sends. Map every clause in the brief to the question or rule that applies it, in `<notes>`. Validate the decision file with `validate_decision` (or `mb validate <decision file> --local`)."
 
-When the author proposes making a fact in the state an attribute that the brief's Inputs don't list, ask the person first: today the app must send it in `attribute_values`. With a yes, add it to the Inputs and copy the values into the dataset's lines ([Facts are attributes](design.md#facts-are-attributes-judgment-is-a-question)); with a no, the author keeps a question.
+An attribute derived from the state needs nothing from the person or the dataset: the app's call doesn't change, and the dataset's lines already carry the state. Add it to the brief's Inputs. Only a fact the app computes and isn't in the state (a count from another system, say) needs the person: the app would send it in `attribute_values`, so ask before relying on it.
 
 Then register it (`register_decision`, or `mb register`) in the environment the decision will run in. The first registration stores the deployment's default model as the environment's model setting, at revision 1. Then do these in order:
 

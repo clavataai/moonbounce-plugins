@@ -11,9 +11,19 @@ Read each clause of the brief and sort what it depends on:
 
 Never ask a question about something the app can compute. "Was the request more than 30 days after delivery?" spends an model call to get a probability about arithmetic, and it can be wrong; `days_since_delivery` as an attribute can't be.
 
-**How, today.** An attribute's value comes from the caller: the app sends `attribute_values` with each call, beside `state`, so a fact the app also puts in `state` is sent twice. Declare each attribute with its type and range (`{"type": "number", "minimum": 0}`, a `boolean`, or a `string` with its `enum`), and give a question's `reads` only the fields its judgment needs. Every dataset line then carries `attribute_values` too: when the facts are already in each line's `state`, copy them over with jq, for example `jq -c '.attribute_values = {days_since_delivery: .state.order.days_since_delivery}' <file>`.
+**How.** Declare the attribute with its type and range (`{"type": "number", "minimum": 0}`, a `boolean`, or a `string` with its `enum`) and, for a fact already in the state, `from`: its state path, as in `reads`. Evaluate fills it from each call's `state`, validated by the declaration with no coercion, so the app's call doesn't change and the dataset's lines need nothing added:
 
-Moving a fact from a question to an attribute changes what the app must send, so ask the person before relying on it. It can come up at any point: while writing the brief, when the author writes the structure, or in the refine loop when a question about a fact keeps getting it wrong. The brief doesn't have to have named it. Moonbounce plans attributes that read a state path themselves (`"from": "state.order.total"`), which would end the duplication; until then, the app sends them.
+```json
+"order_total_usd": { "type": "number", "minimum": 0, "from": "state.order.order_total_usd" }
+```
+
+- **A missing or null field** takes the attribute's `default`; without one the call is a 400 naming the path. Give a default when the field can be absent (and when older traffic may lack it, since replay recomputes it from each stored case's state).
+- **A value of the wrong type** (a total sent as `"300"`) or out of range is a 400. A derived string attribute refuses any label outside its `enum`, so derive one only from a field whose values are a closed set.
+- **A fact the app computes** that isn't in the state (a count from another system, a lookup) has no `from`: the app sends it in `attribute_values` with each call. That changes the app's call, so ask the person before relying on one.
+
+A fact can become an attribute at any point: while writing the brief, when the author writes the structure, or in the refine loop when a question about a fact keeps getting it wrong. The brief doesn't have to have named it.
+
+**Switching an attribute the app already sends to `from`** is the one change that isn't free. A version that derives it refuses a value for it in `attribute_values`, so every live call that still sends it would be a 400. Tell the person: the app must stop sending that attribute when it starts sending the new version's hash, in the same release. In the dataset, drop it from the lines' `attribute_values` (`jq -c 'del(.attribute_values.<name>) | if .attribute_values == {} then del(.attribute_values) else . end'`), and score the old version on its own copy that keeps it.
 
 **Keep facts out of questions.** A question sees only the state paths in its `reads`, so leave out every field that is an attribute: a model that also sees the numbers may weigh them its own way, against the exact comparisons in your rules. A path a question reads must be present on every call, so an optional field is read through its parent, and the question then sees the parent's other fields too. When an optional text field shares a parent with facts (a tracking line inside `order`, beside the totals), ask whether the app can send the text under a key of its own (`state.delivery`, always present, holding an optional `tracking`), so the question reads just that.
 
@@ -45,14 +55,14 @@ Group features that share a reason before weighing them: two independent ways to
 
 ## The refund decision, worked
 
-The refund policy's facts (days since delivery, refunds in the last year, the order total) are in `state.order` and become attributes; its judgments become two questions; its precedence becomes `rules`.
+The refund policy's facts (days since delivery, refunds in the last year, the order total) are in `state.order` and become attributes derived from it with `from`; its judgments become two questions; its precedence becomes `rules`.
 
 ```json
 {
   "attributes": {
-    "days_since_delivery": { "type": "number", "minimum": 0 },
-    "refunds_last_12_months": { "type": "number", "minimum": 0 },
-    "order_total_usd": { "type": "number", "minimum": 0 }
+    "days_since_delivery": { "type": "number", "minimum": 0, "from": "state.order.days_since_delivery" },
+    "refunds_last_12_months": { "type": "number", "minimum": 0, "from": "state.order.refunds_last_12_months" },
+    "order_total_usd": { "type": "number", "minimum": 0, "from": "state.order.order_total_usd" }
   },
   "questions": {
     "says_enough": {
