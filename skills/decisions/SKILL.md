@@ -100,6 +100,7 @@ structure_hash: null   # the structure the brief was last checked against
 date: 2026-11-06       # when stage or structure_hash last changed
 commits: none          # the person's choice: none, or the branch to commit on after each stage and kept version
 frozen: null           # build flow only: a sha256 of the brief's text below the front matter, when the blind set was written
+report: null           # chart or text: how the person sees round reports, once known
 ---
 ```
 
@@ -112,6 +113,14 @@ Update `stage` and `date` when a stage is done. Going back a stage is allowed: e
 ### What the person sees
 
 Three messages always have the same shape, so the person can compare rounds and knows where to look. Everything else (drafting the brief, explaining a mistake, proposing an attribute) is ordinary conversation.
+
+**Ask through the host's question dialog when it has one** (Claude Code's AskUserQuestion: up to 4 questions a call, 2 to 4 options each, a note on each answer). The person picks instead of typing, which matters most for labels:
+
+- **A probe or a label to settle:** the case in the question's text (the message and the facts that matter), each outcome an option in a fixed order with no recommendation, and their reason in the answer's note. Up to 4 cases a call. A label the person gives needs its `reason`: when an answer comes back without one, ask for it in text.
+- **A Stop:** the question, with the options listed under **Options**.
+- **Fall back to text** when the host has no dialog, or when a question has more than 4 outcomes.
+
+**Every way out of a stage that ends in a Stop is the person's choice**, and so is every move back: after `refine`, on to `red_team` or finish; after a red-team round, back to `refine`, another round, on to `blind_check` or finish; after `blind_check`, back to `refine` or on to `import`. Show what the stage found, recommend, and let the person choose, even when the guide names the usual next stage. A stage that ends without a Stop (`cases`, `structure`) moves on when its done-when holds.
 
 **At a Stop**, use these three parts, in this order:
 
@@ -134,18 +143,18 @@ When the question is how a case should go or which clause wins (a policy ruling,
 **After each scored candidate in the refine loop**, report the round as a table, base beside candidate, then the candidate's loss matrix, then one line each for the verdict and the change, the decision diff, and the cost:
 
 ````markdown
-**Round 3: v4 against v3**
+**Round 3: the round 3 candidate against v3**
 
-| | v3 (base) | v4 (candidate) |
+| | v3 (base) | Round 3 candidate |
 | --- | --- | --- |
 | Loss per case | 0.32 | 0.17 |
 | Macro F1 | 0.84 | 0.91 |
 | `<priority outcome>` precision / recall | 0.94 / 0.90 | 0.97 / 0.89 |
 | Items scored (`n`) | 118 | 118 |
 
-**Where v4's loss is** (row: the right answer; column: what v4 gave)
+**Where the candidate's loss is** (rows: actual, columns: predicted)
 
-| right ↓ gave → | grant | deny | escalate |
+| actual ↓ predicted → | grant | deny | escalate |
 | --- | --- | --- | --- |
 | **grant** | ✓ 55 | ▓ 1 (was 2) · 33% | ░ 4 · 7% |
 | **deny** | ▓ 3 (was 6) · 47% | ✓ 34 | 1 · 3% |
@@ -153,10 +162,10 @@ When the question is how a case should go or which clause wins (a policy ruling,
 
 **Chart:** <report_url>
 **Excluded:** 2 (`failed_transient` 2), the same items on both sides.
-**Verdict:** kept (accepted) / kept (red-team repair) / dropped: <the report's reasons>; fixed <changes.fixed>, broke <changes.broken>
+**Verdict:** kept as v4 (accepted) / kept as v4 (red-team repair) / dropped: <the report's reasons>; fixed <changes.fixed>, broke <changes.broken>
 **Changed:** <the one change> because <the report's evidence>.
 
-**How the decision changed** (v3 → v4)
+**How the decision changed** (v3 → round 3 candidate)
 
 ```diff
  questions.late_delivery
@@ -175,15 +184,25 @@ When the question is how a case should go or which clause wins (a policy ruling,
 
 The loss matrix is a heatmap of where the loss comes from: the loss the objective's weights put on each kind of wrong answer.
 
-**The chart link:** `loss_report` returns `report_url` when both sides are runs (`run_ids`): a page in the Moonbounce web app that draws the same report as interactive heatmaps. Print it on the **Chart** line, as it came, so a person reading in a terminal can open it; leave the line out when there is none. It opens for anyone signed in to the team that owns the runs, and expires with them, after about a day. The text matrix stays either way.
+**The chart link:** `loss_report` returns `report_url` when both sides are runs (`run_ids`): a page in the Moonbounce web app that draws the same report as interactive heatmaps. Print it on the **Chart** line, as it came, for every scored version (the first structure's scoring included), so a person reading in a terminal can open it; leave the line out when there is none. It opens for anyone signed in to the team that owns the runs, and expires with them, after about a day.
+
+**Show one report, not two.**
+
+- **A terminal or IDE** (Claude Code, Codex: CLI, desktop or IDE extension) draws no chart inline: show the text matrix (the scorer's table) and the **Chart** line.
+- **A chat app that draws MCP Apps** (the Claude apps, ChatGPT): the chart is the report. It draws only for a `loss_report` call made in the main conversation, never a subagent's, so make that call yourself over the scored runs. Show the headline table, the **Verdict**, **Changed** and **Cost** lines, and leave out the text matrix and the decision diff, which the chart shows.
+- **When you can't tell,** ask the person once which they see, and record it in the brief's front matter as `report: chart` or `report: text`.
+
+The text matrix:
 
 - **Wrong cells:** the count (from `confusion`), `(was n)` when it differs from the base's `confusion`, and the cell's share of the candidate's loss (its `by_mistake` `loss` ÷ the report's `loss`). Shade by that share: `█` 50% or more, `▓` 25 to 50%, `▒` 10 to 25%, `░` 5 to 10%, nothing below 5%. The shaded cells are where a change pays most.
 - **Right cells:** `✓` and the count, from `confusion` (the cells whose `got` is the `expected`).
-- **Columns:** every outcome, plus `none` when some cases got no outcome (`got: null`).
+- **Rows and columns:** the same words as the chart, rows actual and columns predicted, every outcome in the order of the report's `outcomes`, plus a `none` column when some cases got no outcome (`got: null`).
 - With more than about six outcomes, list the shaded cells instead of drawing the whole matrix.
 - `confusion` lists every cell with a case and `by_mistake` every wrong one, so a cell missing from them is zero.
 
-The priority row shows the outcome the objective's `priority` names (with two outcomes), or the outcome whose mistakes cost most. Add a `Target` row only when the person set one, with `target_met`. Show `excluded` only when it isn't empty. In the improve flow, one table per label source that was scored, the deciding one first, named in its title. Keep the version numbers (v1, v2, …) the same in every report, the decision file's commits and `work/runs.json`.
+The priority row shows the outcome the objective's `priority` names (with two outcomes), or the outcome whose mistakes cost most. Add a `Target` row only when the person set one, with `target_met`. Show `excluded` only when it isn't empty. In the improve flow, one table per label source that was scored, the deciding one first, named in its title.
+
+**Version numbers are the server's.** A version is vN only once it is kept and registered, N being the `version.number` `register_decision` returned, so reports, commits, `work/runs.json` and the web app agree. Until then a candidate is named by its round ("the round 3 candidate", or "round 3 candidate B" when a round has more than one). A dropped candidate never gets a number.
 
 **Cost** goes in every Stop and every round that ran model calls, in dollars (`cost.usd_micros` ÷ 1,000,000): this run, the running total, and the cap the person set.
 

@@ -4,12 +4,68 @@ Both flows end in this loop. The build flow ([build.md](build.md)) runs it over 
 
 ## Roles
 
-The **author** edits the structure, and you (the orchestrator) score it. Scoring is mechanical, so you can do it yourself, or give it to a subagent on a smaller, cheaper model ([The scorer](#the-scorer) below). Brief a fresh author each round with the brief, its notes and the round's report summary, and have it edit the decision file in place, one change per candidate (except the batched cuts below): a long-lived author re-reads every earlier round and re-emits the whole structure each time. The author never scores its own version and never reads a set it hasn't been given:
+The **author** edits the structure, and you (the orchestrator) score it. Scoring is mechanical, so you can do it yourself, or give it to a subagent on a smaller, cheaper model ([The scorer](#the-scorer) below). Brief a fresh author each round with the brief, its notes and the round's report summary: a long-lived author re-reads every earlier round and re-emits the whole structure each time. The author never scores its own version and never reads a set it hasn't been given:
 
 - In the build flow, the author is given the repo's dataset and never the blind set.
 - In the improve flow, the author is given the decision's cases.
 
 Give the author the summary's lines and `report_url`, and what the round's change needs from the full report: the roll-ups it aims at and the worst cases they list (`detail: "full"`), or the rows behind a cell (`cases`), each with its `reason` from the dataset or `list_cases`. Reasons are often the best clue for a rewrite. Pass on only the parts the change needs, never the whole report.
+
+Put these in the author's prompt:
+
+- **Validate from the file.** With a shell, `curl -s -H 'content-type: application/json' --data @<candidate file> <API>/v1/validate` (no key needed) or `mb validate <candidate file>`. Don't pass the structure to `validate_decision`: it makes the author write the whole structure out again, and a candidate's first run validates it anyway. Use the tool only without a shell.
+- **Describe, don't quote.** State a question's criteria as the kind of request it covers, not the wording of the cases that broke it: a list of a red-team round's phrasings fits that round and can miss the next one. Examples in criteria are fine as illustrations of the kind, not as the set.
+- **A fact about characters isn't a judgment.** Whether two addresses are the same, or one letter apart, is a comparison the model makes unsteadily, and it flips between runs. Make it an attribute the app sends or derives ([Facts are attributes](design.md#facts-are-attributes-judgment-is-a-question)), and ask the person before relying on a field the app doesn't send yet.
+
+### Candidates
+
+Each candidate is one change (except the batched cuts below), kept in `moonbounce/scratch/<decision_id>/` until it is kept. The repo's decision file holds only the last kept version: copy a candidate there once it is kept, never before it is scored.
+
+- **The author edits a copy, not a rewrite.** It copies the version it starts from to `moonbounce/scratch/<decision_id>/<round>-<letter>.json` (`cp`) and edits that copy in place, so it writes only the text that changes, never the whole structure.
+- **A candidate's first run sends only what changed,** as `structure_changes: {base_hash, changes}` ([Score a version](#score-a-version)). Derive it from the two files with jq rather than writing it out: whole features that differ or are new, `null` for removed ones, and `result` when it changed.
+
+  ```sh
+  jq -n --slurpfile base <base file> --slurpfile cand <candidate file> --arg h <base structure_hash> '
+    $base[0].structure as $B | $cand[0].structure as $C
+    | {base_hash: $h, changes: (
+        reduce ("questions", "attributes", "aggregations") as $s ({};
+          ([($C[$s] // {} | to_entries[] | select($B[$s][.key] != .value) | {(.key): .value}),
+            ($B[$s] // {} | keys_unsorted[] | . as $k | select($C[$s] // {} | has($k) | not) | {($k): null})] | add) as $d
+          | if $d then . + {($s): $d} else . end)
+        + (if $C.result != $B.result then {result: $C.result} else {} end))}' \
+    > moonbounce/scratch/<decision_id>/<round>-<letter>.changes.json
+  ```
+
+  The changes file is usually a few hundred bytes, against tens of kilobytes for the whole structure. The run reports the merged structure's hash, which later runs of the candidate send; it is the candidate file's hash too (the hash ignores key order). When the changes come out empty (`"changes": {}`), the candidate is its base: don't score it.
+- **Independent fixes are siblings.** When a round has several fixes that don't depend on each other (they change different features: different questions, attributes or aggregations by name; two fixes inside one aggregation are one candidate or a stack), each candidate starts from the last kept version and makes its one change, and each is scored against that version with that version's hash as `base_hash`. A dropped one then affects only itself, and siblings can be scored in parallel.
+- **A sibling that passes is accepted, not yet kept.** Siblings are each judged against the same base, so keeping them one after another could replace a better version with a worse one. Register nothing and leave the decision file alone until the round is settled:
+  - one sibling accepted: it is the round's kept version;
+  - several accepted: combine them into one candidate and score it against the best single one (lowest loss per case), to catch the ways two changes interact. Keep the combination when the usual rule accepts it against that one; otherwise keep the best single one.
+
+  In the improve flow, score the best single sibling again as that base, with `refresh` set to the other siblings' changed questions, as for any change to `refresh` ([improve.md](improve.md#refine)); its runs as a candidate replayed those questions' stored answers. The combination is the accepted siblings' changes together under one `base_hash`, the last kept version's. This jq refuses two siblings that change the same feature, which aren't independent:
+
+  ```sh
+  jq -s '{base_hash: .[0].base_hash, changes: (reduce (.[].changes | to_entries[]) as $e ({};
+    if $e.key == "result" then (if has("result") then error("two siblings change result") else .result = $e.value end)
+    else reduce ($e.value | to_entries[]) as $f (.;
+      if (.[$e.key] // {} | has($f.key)) then error("two siblings change \($e.key).\($f.key)")
+      else .[$e.key][$f.key] = $f.value end) end))}' <changes files>
+  ```
+
+- **Stack candidates only when a change needs the one before it.** In a stack, each is scored against the one before, with that candidate's merged hash (from its run) as `base_hash`. When one is dropped, the ones built on it carry its change, so drop them too or have the author rewrite them from the last kept version.
+- **When a candidate is kept,** register it by its hash ([Keep or drop a change](#keep-or-drop-a-change)) and copy its file over the decision file. A kept combination has no file of its own: rebuild it from the last kept file and the combined changes. Rebuild too when the author reordered features, so the file's order matches the registered version (the version keeps the run's copy: a replaced feature stays in the base's place and a new one goes last, and engines ask questions in that order). The base file is the file of the version the changes were made against: the decision file for a sibling or a combination, the previous candidate's file for a stack link. Write the rebuild to scratch, then copy it over the decision file: never redirect onto a file the command reads, because the shell empties it before jq reads it.
+
+  ```sh
+  jq -n --slurpfile base <base file> --slurpfile ch <changes file> '
+    $ch[0].changes as $c
+    | $base[0] | .structure |= (
+        reduce ("questions", "attributes", "aggregations") as $s (.;
+          reduce (($c[$s] // {}) | to_entries[]) as $e (.;
+            if $e.value == null then del(.[$s][$e.key]) else .[$s][$e.key] = $e.value end))
+        | if $c | has("result") then .result = $c.result else . end)' \
+    > moonbounce/scratch/<decision_id>/<round>-kept.json &&
+    cp moonbounce/scratch/<decision_id>/<round>-kept.json moonbounce/<decision_id>.json
+  ```
 
 ### The scorer
 
@@ -20,6 +76,8 @@ A scoring subagent runs the runs and the report, and hands back numbers, not rep
 - For the [round report](../SKILL.md#what-the-person-sees), call `loss_report` once more over the same runs with `detail: "full"` and build its rows from it: the priority outcome's precision and recall (`outcomes`), and the loss matrix (each cell's count from `confusion`, `(was n)` from the base's, and its share of the loss from `by_mistake`). Hand back those rows as the round report's table, not the report.
 - Hand back the run ids with their structure hash and expiry, each failed item's id and error code, the summary's numbers as a few lines, the round report's table and `report_url`. Never restate a report, copy its JSON or write it to a file: the full report stays one call away (`detail: "full"`) and in the chart.
 - Look at particular mistakes only when the orchestrator asks for them: rows through `cases` with a filter (`cell`, `severe`, `changed`, ...), or `detail: "full"` for the roll-ups and the worst mistakes with their `fixing_flips`. Hand back only what was asked for.
+- **How a question answered particular cases.** The full report's worst mistakes carry the answers of their fixing flips and conflicting questions (`answers`): read those first. When the author needs every question's answer on a few chosen cases, run just those items again (inline in the build flow, as `cases: {evaluation_ids}` in the improve flow) with `include: ["answers"]` and `results: "all"`, and hand back the answers as a small table. Never run the whole dataset again to collect answers: a re-run is another draw of a noisy model, and it costs a full scoring.
+- Write nothing to files but what the orchestrator asks for, and never copy a tool's result into a file by retyping it.
 
 ## Score a version
 
@@ -44,7 +102,7 @@ Never score by hand, and never pass the results back yourself. Pass `run_id`s so
   - Price base and candidate on the same items. Items the base lacks are counted in `excluded.no_base` and left out, so when the dataset grows, score the base on the new items too and add that run to its `run_ids`.
   - Runs expire after about a day. Keep the run ids with their structure hash and expiry (the build flow keeps them in `work/runs.json`), and re-score the last kept version when its runs have expired.
 - **Look at the data.** Choose how much to read, and how, from [Looking at the data](#looking-at-the-data) below.
-- **Report.** Show the person each round in the [round report](../SKILL.md#what-the-person-sees) format, base beside candidate: loss per case and whether it was accepted (with `reasons` when not), `macro_f1`, the precision and recall of the outcome the objective's `priority` names (from `outcomes`), and the loss matrix (`confusion` and `by_mistake`), which shows where the loss sits. The summary has the headline numbers; the matrix and the priority outcome's line come from one `detail: "full"` call over the same runs, read for those numbers only (a scorer hands back the finished table: [The scorer](#the-scorer)). Loss decides what is kept, because it is the objective the person set; the other numbers help them see what changed.
+- **Report.** In a host that draws MCP Apps, call `loss_report` for the report you show from the main conversation, not a subagent, so the chart draws; in a terminal the scorer's table is the report ([Show one report](../SKILL.md#what-the-person-sees)). Show the person each round in the [round report](../SKILL.md#what-the-person-sees) format, base beside candidate: loss per case and whether it was accepted (with `reasons` when not), `macro_f1`, the precision and recall of the outcome the objective's `priority` names (from `outcomes`), and the loss matrix (`confusion` and `by_mistake`), which shows where the loss sits. The summary has the headline numbers; the matrix and the priority outcome's line come from one `detail: "full"` call over the same runs, read for those numbers only (a scorer hands back the finished table: [The scorer](#the-scorer)). Loss decides what is kept, because it is the objective the person set; the other numbers help them see what changed.
 - **Failures.**
   - An item whose model calls fail permanently (unreadable content, a model refusal) is counted as its dearest mistake.
   - A retryable failure (`NOT_STARTED`, `ENGINE_UNAVAILABLE`) is left out as `excluded.failed_transient`. Resend those items in a new run with a new Idempotency-Key, and list both runs.
@@ -84,7 +142,7 @@ Keep a candidate when both of these hold:
 
 The first structure that validates and scores is the first kept version: it is the base the next candidate must beat. `loss_report` never accepts a candidate without a base, so don't wait for the target to keep a first version. A target, when the person set one, is a reference point: it is neither when to keep nor when to stop.
 
-Register each kept version (`register_decision` with `{decision_id, structure_hash}`: the hash its runs reported, while one of them lives, so the structure isn't sent again), so its hash works as a base and at import, and save it in the decision file. When the brief's `commits` names a branch, commit it there with its structure hash and loss per case in the message. The next candidate starts from the last kept version, or from a dropped one when the author judges that one closer.
+Register each kept version as soon as it is kept, before the next round or stage: `register_decision` with `{decision_id, structure_hash}`, the hash its runs reported, while one of them lives, so the structure isn't sent again. Its hash then works as a base and at import, and stopping at any point leaves the server with it. Its `version.number` is the version's name from then on (vN in every report). Save it in the decision file. When the brief's `commits` names a branch, commit it there with its version number, structure hash and loss per case in the message. The next candidate starts from the last kept version, or from a dropped one when the author judges that one closer.
 
 Models answer the same case differently from run to run. When a verdict hinges on one or two cases, score both versions twice. Small sets are only indicative.
 

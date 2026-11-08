@@ -9,12 +9,12 @@ The person may bring a written policy, labeled data, both, or only a description
 | `cases` | A case writer writes the dataset around the user's own data and the labeled probes: cases a reader of the brief could call either way first, then a thin floor of plain ones | `moonbounce/<id>.examples.jsonl` | Every clause tested on both sides of its line, every outcome present, no near-duplicates |
 | `labels` | A labeler labels from the brief alone; disagreements, unsure cases and a sample of agreements go to the user, who labels the sample blind; brief and labels are revised until they agree | Labeled JSONL, brief edits | **Stop:** the user accepts the labels |
 | `structure` | The author writes the first structure from the brief | Decision file structure | It validates, and every brief clause maps to a question |
-| `refine` | The refine loop over the dataset | Accepted versions, loss reports | **Stop:** the user says it's good enough |
-| `red_team` | A red team (another model when the user has one) attacks the version `refine` settled on; the round is labeled blind, settled with the user, scored once and joins the dataset | `work/red-<n>.jsonl`, dataset additions | **Stop:** a round breaks nothing worse than a normal mistake, or after three rounds. A round that breaks a costly or severe one goes back to `refine` first, then attacks the new version |
+| `refine` | The refine loop over the dataset | Accepted versions, each registered as it is kept; loss reports | **Stop:** the user says it's good enough |
+| `red_team` | A red team (another model when the user has one) attacks the version `refine` settled on; the round is labeled blind, settled with the user, scored once and joins the dataset | `work/red-<n>.jsonl`, dataset additions | **Stop** after each round: the user chooses `refine` (recommended when it broke a costly or severe mistake; the new version is attacked next), another round, `blind_check` (recommended when it broke nothing worse than a normal mistake, or after three rounds), or finish (`import` without the blind check) |
 | `blind_check` | An agent that has seen neither the structure nor the examples writes a fresh set from the frozen brief, hard cases first, as the case writer does; scored once | `moonbounce/<id>.blind.jsonl` | **Stop:** the user accepts the result. Failures join the training set and the flow returns to `refine`, then `red_team`; the next freeze gets a fresh blind set |
 | `import` | With the person's go-ahead, `import_examples` stores the dataset and runs the model, so previews and the improve flow can use it | Server copy of the dataset | Every example stored, except ones the person agreed to leave out (a retryable failure sent again in a new call; one with `retryable: false` fixed, dropped or taken to the person), and `loss_report` over the runs matches the last scores; the build flow ends |
 
-At a **Stop**, show the person what the stage left and wait for their answer before moving on. When the question is how a case should go or which of two clauses wins, ask what the person would decide before showing your recommendation, and show it once they answer or ask for it: a recommendation offered first tends to be accepted, which hides what they actually think. When a stage is done, set the brief's `stage` to the next one and its `date` to today, and commit only when the brief's `commits` names a branch.
+At a **Stop**, show the person what the stage left and wait for their answer before moving on. Leaving a stage that ends in a Stop, and every move back, is the person's choice, even when this guide names the usual next stage: recommend it, and let them choose. A stage without a Stop (`cases`, `structure`) moves on when its done-when holds. When the question is how a case should go or which of two clauses wins, ask what the person would decide before showing your recommendation, and show it once they answer or ask for it: a recommendation offered first tends to be accepted, which hides what they actually think. Ask through the host's question dialog when it has one ([What the person sees](../SKILL.md#what-the-person-sees)). When a stage is done, set the brief's `stage` to the next one and its `date` to today, and commit only when the brief's `commits` names a branch.
 
 ## Why a team
 
@@ -25,7 +25,7 @@ One agent that writes the cases, labels them, writes the structure and scores it
 | **You** (orchestrator) | Talk with the person, write the objective and brief, route paths, compare labels, score versions, keep the front matter | Everything | The decision file's `objective`, the brief, the labeled JSONL |
 | **Case writer** | Writes the probes at `brief`, with no label; then the dataset around the person's data and the probes, keeping its own intended labels out of the cases | The brief, the person's data with its labels, the labeled probes; at `brief`, every earlier probe | `work/probes.jsonl`, `examples.jsonl` (its cases unlabeled, appended), `work/intended.jsonl` |
 | **Labeler** | Labels every case from the brief alone | The brief, one unlabeled file | `work/labels.jsonl` |
-| **Author** | Writes the structure, then edits it each round, a fresh author per round | The brief, the labeled `examples.jsonl`, its own `work/notes.md`, the round's report summary | The decision file's `structure`, `work/notes.md` |
+| **Author** | Writes the structure at `structure`; at `refine`, a fresh author per round edits a copy of the last kept version | The brief, the labeled `examples.jsonl`, its own `work/notes.md`, the round's report summary | The decision file's `structure` (at `structure` only), candidate files in `moonbounce/scratch/<decision_id>/`, `work/notes.md` |
 | **Red team** | Writes cases meant to break the version `refine` settled on, at `red_team` | The brief, the decision file, `examples.jsonl` | `work/red-<n>.jsonl`, `work/red-<n>.intended.jsonl` |
 | **Blind writer** | Writes the blind set from the frozen brief | The brief and [Hard cases first](#hard-cases-first) only | `blind.jsonl` (unlabeled), `work/blind-intended.jsonl` |
 
@@ -109,15 +109,15 @@ When the person has labeled data already, read it, and its reasons, before you w
 - **A reason no clause covers:** a missing clause. Draft it and ask the person.
 - **A reason that contradicts a clause:** ask the person which is right, and settle it in the brief before they confirm it.
 
-**Probes.** Then find the brief's blind spots with the person. Brief a fresh case writer for each round of probes, numbering the rounds from 1: "Read `<brief>`, the person's data in `<files>`, and the probes already asked in `<probes>` with their answers in `<examples>`. Write 5 to 10 new cases a careful reader of this brief could call either way: one fact either side of a line, two clauses pulling opposite ways, something the brief doesn't mention, wording that points one way while the facts point the other. Don't ask again what an earlier probe settled. Use only the inputs, types and ranges the brief lists. Don't decide their outcomes: a case you can't call is a better probe. Append each to `<probes>` as `{item_id: "probe-<round>-<k>", state, attribute_values?, metadata: {cell: <what it probes>, group, origin: "probe"}}`, leaving the lines already there unchanged. Read nothing else." Write more than 10 in a round only when the brief leaves many things open.
+**Probes.** Then find the brief's blind spots with the person. Brief a fresh case writer for each round of probes, numbering the rounds from 1: "Read `<brief>`, the person's data in `<files>`, and the probes already asked in `<probes>` with their answers in `<examples>`. Write 5 to 10 new cases a careful reader of this brief could call either way: one fact either side of a line, two clauses pulling opposite ways, something the brief doesn't mention, wording that points one way while the facts point the other. Cover the inputs: every input in the brief's Inputs that could change the outcome, including each one the brief says doesn't count, gets at least one probe across the rounds, so list in `metadata.cell` the inputs each probe turns on, and favour inputs no earlier probe has turned on. Don't ask again what an earlier probe settled. Use only the inputs, types and ranges the brief lists. Don't decide their outcomes: a case you can't call is a better probe. Append each to `<probes>` as `{item_id: "probe-<round>-<k>", state, attribute_values?, metadata: {cell: <what it probes>, group, origin: "probe"}}`, leaving the lines already there unchanged. Read nothing else." Write more than 10 in a round only when the brief leaves many things open.
 
-Put each probe to the person with no label and no recommendation, and ask how it should go and why. For each answer:
+Put each probe to the person with no label and no recommendation, and ask how it should go and why: in the question dialog when the host has one, up to 4 probes a call, the outcomes as options in a fixed order and their reason in the answer's note. For each answer:
 
 - When it says something the brief doesn't, or says otherwise, change the brief: a clause, an edge case, or the Scope.
 - Append the probe to `examples.jsonl` with `claims: [{kind: "expected_outcome", value: <their label>}]`, `label_source: "human"` and their reason as `reason`.
 - When they can't or won't call it, leave it unlabeled in `probes.jsonl`, and note the open question in the brief's Edge cases.
 
-When a round of answers changed the brief, write a few more probes against the new text. Stop when new probes stop changing it, or when the person says enough, then ask them to confirm the brief. More probes can come later: when a refine round turns up a mistake the brief doesn't settle, put a few probes about it to the person before changing the structure. An answer that changes the brief is a brief change, handled as [Going back](#going-back) says.
+When a round of answers changed the brief, write a few more probes against the new text. Stop when a round neither changed the brief nor turned on an input the earlier rounds hadn't, and every input that could change the outcome has had a probe, or when the person says enough; then ask them to confirm the brief. A round that only confirms lines already settled isn't a reason to stop while inputs remain unprobed: a clause saying an input doesn't count is the kind of line the person is most likely to correct. More probes can come later: when a refine round turns up a mistake the brief doesn't settle, put a few probes about it to the person before changing the structure. An answer that changes the brief is a brief change, handled as [Going back](#going-back) says.
 
 ### `cases`
 
@@ -143,6 +143,8 @@ Compare the labeler's labels with the intended ones, and take these to the perso
 
 Same-model writers and labelers rarely disagree outright, so the unsure cases and the person's blind sample carry most of the signal. When the person differs from the agents on more than one or two sampled agreements, the brief has a gap both agents share: settle it, and sample again until the person agrees.
 
+Check each of the person's new labels against their own earlier labels and the brief too, not only against the agents'. People are inconsistent, and a call that contradicts one they made before (a probe, a settled case) or a clause they approved is a question, not a new rule: show the earlier call beside the new one, name the difference you see between the cases, and ask which way it goes. Change the brief only when they mean the new call as a rule.
+
 When the labeler disagrees with one of the person's own labels, show the person their reason beside the labeler's. Either the brief misses what their reason says, and the brief changes, or the old label was wrong, and they relabel it. Their reason stays with the label unless they change the label.
 
 Each disagreement is ambiguity in the brief, not noise. Settle it with the person, update the brief or drop the case, and never average two labels. When the brief changes, the case writer and the labeler re-check only the cases the change touches: those whose intended or given reason cites a changed or removed clause, those whose situation an added clause or edge case describes, and those whose inputs a changed clause reads (an exception that widens or narrows can move cases whose reasons cite only the general rule). When unsure whether a case is touched, re-check it. A re-check is mechanical, so a smaller model can do it.
@@ -157,15 +159,22 @@ Every label must be an outcome the brief's Outcomes section names, so the struct
 
 ### `structure`
 
-Brief a fresh author: "Read `<design guide>` first. Then write the structure for the decision in `<brief>` at `<decision file>`, using `<examples>`. Make facts attributes and judgments questions: a fact in the state becomes an attribute that declares `from` (its state path), and in `<notes>` list each one with the clause it serves. State the brief's criteria in each question rather than wording drawn from particular cases. Read only paths the brief says the app always sends. Map every clause in the brief to the question or rule that applies it, in `<notes>`. Validate the decision file with `validate_decision` (or `mb validate <decision file> --local`)."
+Brief a fresh author: "Read `<design guide>` first. Then write the structure for the decision in `<brief>` at `<decision file>`, using `<examples>`. Make facts attributes and judgments questions: a fact in the state becomes an attribute that declares `from` (its state path), and in `<notes>` list each one with the clause it serves. State the brief's criteria in each question rather than wording drawn from particular cases. Read only paths the brief says the app always sends. Map every clause in the brief to the question or rule that applies it, in `<notes>`. Validate the decision file from the file, without passing it to a tool: `curl -s -H 'content-type: application/json' --data @<decision file> <API>/v1/validate` (it needs no key) or `mb validate <decision file>`. Use the `validate_decision` tool only when you have no shell: it makes you write out the whole structure again."
+
+Give the author the API's base URL for that check: the host of the MCP server's URL (`https://api.moonbounce.ai` for the hosted one).
 
 An attribute derived from the state needs nothing from the person or the dataset: the app's call doesn't change, and the dataset's lines already carry the state. Add it to the brief's Inputs. Only a fact the app computes and isn't in the state (a count from another system, say) needs the person: the app would send it in `attribute_values`, so ask before relying on it.
 
-Then register it (`register_decision`, or `mb register`) in the environment the decision will run in. The first registration stores the deployment's default model as the environment's model setting, at revision 1. Then do these in order:
+Then register it in the environment the decision will run in, sending the structure once:
+
+- **With a shell and a key:** `mb register <decision file>`, from the file.
+- **Otherwise:** dry-run one item with `create_run`, the structure inline ([Score a version](refine.md#score-a-version)), then register it by the `structure_hash` that run reports: `register_decision` with `{decision_id, structure_hash}`, while the run lives. Every later run names that hash. Passing the whole file to `register_decision` as well would write the structure out a second time. If the call fails as a whole (a 4xx or 5xx, with no `run_id`), no run keeps the structure: register with the whole file instead. A run whose items fail one by one still keeps it.
+
+The first registration stores the deployment's default model as the environment's model setting, at revision 1. Then do these in order:
 
 1. Set the model (`set_model`) to the one production will run (`list_models` names the choices). When the decision already has evaluations in this environment, it is in use: a model change moves its live traffic, so stop and ask the person first.
 2. Store the objective (`set_objective`), and check that `unknown_outcomes` is empty.
-3. Run one dry-run `evaluate` on one case.
+3. After `mb register`, run one dry-run `evaluate` on one case. After the one-item run, that was the check: score the dataset from here, on the model you set.
 
 Put the structure's hash in the brief's front matter.
 
@@ -173,9 +182,12 @@ Done when it validates and every clause maps to a question.
 
 ### `refine`
 
-Run [the refine loop](refine.md) over `examples.jsonl`, with the author editing and you scoring. Brief a fresh author each round with the brief, its `work/notes.md` and the round's report summary (the roll-ups, the cases you read and their reasons), and have it edit the decision file in place, one change per candidate, rather than rewrite the structure. A long-lived author re-reads every earlier round and re-emits the whole structure each time. The version registered at `structure` is the first kept version. Don't use `create_preview` here: it replays stored cases, and the build flow has none yet.
+Run [the refine loop](refine.md) over `examples.jsonl`, with the author editing and you scoring. Brief a fresh author each round with the brief, its `work/notes.md` and the round's report summary (the roll-ups, the cases you read and their reasons). It edits a copy of the last kept version in `moonbounce/scratch/<decision_id>/`, one change per candidate, and each candidate's first run sends only that change as `structure_changes` ([Candidates](refine.md#candidates)). The decision file itself holds only the last kept version. A long-lived author re-reads every earlier round and re-emits the whole structure each time. The version registered at `structure` is the first kept version. Don't use `create_preview` here: it replays stored cases, and the build flow has none yet.
 
-The stage stops when the person says the decision is good enough. Report `target_met` when they set a target, but it never stops the loop on its own.
+The stage stops when the person says the decision is good enough. Report `target_met` when they set a target, but it never stops the loop on its own. Before the Stop, check the version the loop settled on is registered (each kept version is registered as it is kept), so stopping here leaves the server with it. At the Stop, offer:
+
+1. **`red_team`** (recommended): attack the settled version before the blind check.
+2. **Finish here:** check the model (`get_model`), set the brief's `stage` to `import`, and go on to [`import`](#import), whose Stop gives the import's cost before anything is stored; choosing to finish isn't the go-ahead for it. Say plainly what is skipped: no red team and no blind check, so there is no estimate of how it does on cases nobody tuned it on, and the brief isn't frozen.
 
 ### `red_team`
 
@@ -195,7 +207,13 @@ The dataset was written before the structure, and every version so far was tuned
 2. **Label.** The labeler labels the round blind, from the brief alone, on a copy without `metadata` (its attack names hint at the answer): `jq -c 'del(.metadata)' <red cases> > <unlabeled red>`. Take disagreements and unsure cases to the person, as at `labels`. The red team's intended labels are one side of each comparison, never the answer. A disagreement that changes the brief goes back to `brief`, as any brief change does.
 3. **Score.** Score the settled version on the round once, and show the person the result by attack.
 4. **Keep.** Add the round's cases, with their settled labels, to `examples.jsonl`, and add the run from step 3 to the settled version's base runs.
-5. **Next.** When the round broke a mistake the objective rates costly or severe (look up the severity of its cell, right answer and outcome given, in the decision file's `objective`; the report's row `loss` is weighted by outcome, so it can read high for a normal mistake on a rare outcome), go back to `refine` to fix it, with the round now in the dataset, and attack the version that comes out of it. As before any change aimed at particular wrong cases, read the right cases nearest each broken one (`like`) first. Stop and ask the person when a round breaks nothing worse than a normal mistake, or after three rounds; then go on to `blind_check`. Cheap breaks still join the dataset, and the person can ask for another `refine` round on them.
+5. **Next: a Stop.** Show the round by attack, then recommend and let the person choose:
+   - **Back to `refine`**, recommended when the round broke a mistake the objective rates costly or severe (look up the severity of its cell, right answer and outcome given, in the decision file's `objective`; the report's row `loss` is weighted by outcome, so it can read high for a normal mistake on a rare outcome). The round is now in the dataset, and the version that comes out is attacked again. As before any change aimed at particular wrong cases, read the right cases nearest each broken one (`like`) first.
+   - **Another red-team round** on the same version, while fewer than three have run.
+   - **On to `blind_check`**, recommended when the round broke nothing worse than a normal mistake, or after three rounds.
+   - **Finish here**, as after `refine`, saying what stays unfixed.
+
+   Whatever they choose, the round's cases stay in the dataset.
 
 ### `blind_check`
 
@@ -217,7 +235,7 @@ Never revise against the blind set, and never show it to the author.
 
 **Stop** first: tell the person what the import does (it stores every example as an evaluation in this environment, runs the models once, and makes the labels the decision's cases for previews and the improve flow), what it will cost (about one dry run of the dataset), and wait for their go-ahead.
 
-Store the dataset and the blind set, each with its own import: `import_examples` with up to 200 examples a call, the file's lines as they are (`jq -cs '_nwise(200)' moonbounce/<decision_id>.examples.jsonl` prints one chunk's `examples` per line), the last kept structure by its registered hash, and an Idempotency-Key per call ([Add labeled data](tasks.md#add-labeled-data)).
+Store the dataset and the blind set, each with its own import (when the person finished before `blind_check`, the dataset only: never an older blind file): `import_examples` with up to 200 examples a call, the file's lines as they are (`jq -cs '_nwise(200)' moonbounce/<decision_id>.examples.jsonl` prints one chunk's `examples` per line), the last kept structure by its registered hash, and an Idempotency-Key per call ([Add labeled data](tasks.md#add-labeled-data)).
 
 How failures come back:
 
@@ -226,7 +244,7 @@ How failures come back:
   - **`true`** (an outage, or not started in time): send it again in a new call with a new key.
   - **`false`**: sending it again fails the same way. The cause may be the content (the model refused or couldn't read it) or the model (an answer it couldn't use, a model other than the setting's), and `error.code` and `message` often don't say which. Don't change or drop the example on your own: show the person the failed items with their `error.code`, `message` and the model setting (`get_model`), and fix, drop or reconfigure as they decide.
 
-Read each import's `loss_report` over its calls' `run_id`s. The dataset's loss per case should match the last refine score, and the blind set's the `blind_check` score, within noise. A permanent failure still counts in its run as a mistake (`failed` in the full report, `detail: "full"`), even after you drop the example from the file: compare without those. A fixed example sent again, under the same `item_id`, the same version and the same model, replaces its failure when you list its run beside the original. After a model change, runs of the two versions can't be listed together (400 `RUNS_MIXED`): compare the new runs alone. A difference means the imported examples aren't what was scored: check the file and the structure hash.
+Read each import's `loss_report` over its calls' `run_id`s. The dataset's loss per case should match the last refine score (or red-team score, when the flow finished there), and the blind set's the `blind_check` score, within noise. A permanent failure still counts in its run as a mistake (`failed` in the full report, `detail: "full"`), even after you drop the example from the file: compare without those. A fixed example sent again, under the same `item_id`, the same version and the same model, replaces its failure when you list its run beside the original. After a model change, runs of the two versions can't be listed together (400 `RUNS_MIXED`): compare the new runs alone. A difference means the imported examples aren't what was scored: check the file and the structure hash.
 
 Then offer to wire the decision into the app ([Wire it into the app](tasks.md#wire-it-into-the-app)), which stops for the person before changing their code. Set the brief's `stage` to `done`. Later work on this decision is the improve flow.
 
