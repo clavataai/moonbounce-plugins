@@ -151,6 +151,7 @@ When the question is how a case should go or which clause wins (a policy ruling,
 | **deny** | ▓ 3 (was 6) · 47% | ✓ 34 | 1 · 3% |
 | **escalate** | 0 (was 1) | ▒ 1 · 10% | ✓ 19 |
 
+**Chart:** <report_url>
 **Excluded:** 2 (`failed_transient` 2), the same items on both sides.
 **Verdict:** kept (accepted) / kept (red-team repair) / dropped: <the report's reasons>; fixed <changes.fixed>, broke <changes.broken>
 **Changed:** <the one change> because <the report's evidence>.
@@ -173,6 +174,8 @@ When the question is how a case should go or which clause wins (a policy ruling,
 **The decision diff** shows the person what the version changed, so the report's question names (in `by_question`, and in the chart's hover card where the host shows it) point at wording they can read. Diff the candidate against the base, by feature: each question, attribute or aggregation added, removed or changed, and the result. Show each changed feature whole, as pretty JSON in a `diff` block, with its changed lines marked (`-` old, `+` new) and each removed line just above the line that replaced it, so the person reads the question as the model sees it. Show an added or removed feature whole too. Leave out a round that changed nothing in the decision (a re-score), and leave out unchanged features: never the whole decision.
 
 The loss matrix is a heatmap of where the loss comes from: the loss the objective's weights put on each kind of wrong answer.
+
+**The chart link:** `loss_report` returns `report_url` when both sides are runs (`run_ids`): a page in the Moonbounce web app that draws the same report as interactive heatmaps. Print it on the **Chart** line, as it came, so a person reading in a terminal can open it; leave the line out when there is none. It opens for anyone signed in to the team that owns the runs, and expires with them, after about a day. The text matrix stays either way.
 
 - **Wrong cells:** the count (from `confusion`), `(was n)` when it differs from the base's `confusion`, and the cell's share of the candidate's loss (its `by_mistake` `loss` ÷ the report's `loss`). Shade by that share: `█` 50% or more, `▓` 25 to 50%, `▒` 10 to 25%, `░` 5 to 10%, nothing below 5%. The shaded cells are where a change pays most.
 - **Right cells:** `✓` and the count, from `confusion` (the cells whose `got` is the `expected`).
