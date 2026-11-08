@@ -60,7 +60,7 @@ Review-queue tools serve human reviewers; agents rarely need them. These files s
 
 ## Five rules that bite
 
-1. Register a structure, or evaluate it inline once, before evaluating by its hash; an unknown hash is 404 `STRUCTURE_UNKNOWN`. A backtest does not register its candidate.
+1. Register a structure, or evaluate it inline once, before evaluating by its hash; an unknown hash is 404 `STRUCTURE_UNKNOWN`. A dry run is the exception: it also takes the hash of a structure an unexpired run of the decision ran in the same environment, without registering it. A backtest does not register its candidate.
 2. Send the structure inline or as `moonbounce.structure_hash`, never both (400). Every path a question `reads` (`state.<key>`, `state.<key>.<key>`) must be in `state`, and every attribute without a default needs a value: in `attribute_values`, or at its `from` path in `state` for a derived one, which never goes in `attribute_values` (400 `CONTENT_INVALID`).
 3. Read `status` before the result: `decided` carries `outcome`, `computed` carries `value`, `abstained` carries at most the `abstain` outcome.
 4. Feedback claims name a question (`expected_answer`) or an outcome the result can produce (`expected_outcome`), or approve/reject the returned outcome (`verdict`, never with `expected_outcome`), or flag broken content (`input_broken`); any other kind is a 400. Previews need a result that decides outcomes (`bands`, `rules` or `match`); a value result is 400 `OUTCOMES_INVALID`. For imported examples, address feedback by the example's evaluation `id` (`about.evaluation_id`); feedback by `item_id` binds to primary traffic only.
