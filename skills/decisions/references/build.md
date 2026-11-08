@@ -1,6 +1,6 @@
 # The build flow: a new decision
 
-The person may bring a written policy, labeled data, both, or only a description of what they want decided. The brief is where the first structure comes from, and it is the policy from then on: its Outcomes, Scope, Clauses and Edge cases are the rules the decision applies, whether they started from a document or from the person's answers. The dataset lives in the caller's repo, versioned by git. Scoring sends its items to Moonbounce as dry runs, which keep the run (answers, labels and attribute values) for about a day so `loss_report` can judge it; only the last stage, `import`, stores the dataset for good.
+The person may bring a written policy, labeled data, both, or only a description of what they want decided. The brief is where the first structure comes from, and it is the policy from then on: its Outcomes, Scope, Clauses and Edge cases are the rules the decision applies, whether they started from a document or from the person's answers. The dataset lives in the caller's repo, versioned by git. Scoring sends its items to Moonbounce as dry runs, which keep the run (the items as sent, answers, labels and attribute values) for about a day so `loss_report` can judge it and a later run can name its items (`items_from`); only the last stage, `import`, stores the dataset for good.
 
 | Stage | Does | Leaves | Done when |
 |---|---|---|---|

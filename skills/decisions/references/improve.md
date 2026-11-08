@@ -69,7 +69,7 @@ Then add targeted synthesis where real cases are thin:
 - new policy clauses;
 - regression probes for a change you plan.
 
-Use a fresh case writer and a fresh labeler, as in the build flow's [`cases`](build.md#cases) and [`labels`](build.md#labels) stages. Write the result to `moonbounce/<decision_id>.synthetic.jsonl`, with `label_source: "synthetic"` (or `human` where the person settled the label). These lines stay in the repo. They are scored with dry runs over `items`, apart from the real cases, and never imported among the real cases.
+Use a fresh case writer and a fresh labeler, as in the build flow's [`cases`](build.md#cases) and [`labels`](build.md#labels) stages. Write the result to `moonbounce/<decision_id>.synthetic.jsonl`, with `label_source: "synthetic"` (or `human` where the person settled the label). These lines stay in the repo. They are scored with dry runs over `items` (or `items_from` an earlier run over the same items, [refine.md](refine.md#score-a-version)), apart from the real cases, and never imported among the real cases.
 
 Done when you can say how many usable cases there are, how many were dropped and why, and what the synthetic set adds.
 
@@ -89,7 +89,7 @@ Run each step once per label source that has cases, as in `baseline`, and judge 
 - **With no human-labeled or `unknown` cases at all** (only synthetic labels, just after the build flow for instance), the `synthetic` runs decide. Tell the person the decision has no real labels yet, and that review of real traffic is what will test it.
 - **Reported apart**: the `synthetic` runs, and the `unknown` ones, whenever they didn't decide.
 
-Score the synthetic set the same way, with dry runs over `items`, judged by its own `loss_report`. When the deciding report and the rest disagree, the deciding report wins.
+Score the synthetic set the same way, with dry runs over `items` (each chunk sent once, then `items_from` its latest run), judged by its own `loss_report`. When the deciding report and the rest disagree, the deciding report wins.
 
 Register each version you keep (`register_decision`), so it can be the next base. `create_preview` gives the same comparison in one call when you only need the headline: it has no run ids to page and doesn't split by label source.
 
