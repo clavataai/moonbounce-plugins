@@ -131,9 +131,9 @@ Three messages always have the same shape, so the person can compare rounds and 
 
 When the question is how a case should go or which clause wins (a policy ruling, a probe, a label to settle), leave out **Options**: ask what the person would decide and why, and give your recommendation only once they answer or ask for it. A recommendation shown first tends to be accepted, which hides what they think.
 
-**After each scored candidate in the refine loop**, report the round as a table, base beside candidate, then the candidate's loss matrix, then one line each for the verdict, the change and the cost:
+**After each scored candidate in the refine loop**, report the round as a table, base beside candidate, then the candidate's loss matrix, then one line each for the verdict and the change, the decision diff, and the cost:
 
-```markdown
+````markdown
 **Round 3: v4 against v3**
 
 | | v3 (base) | v4 (candidate) |
@@ -152,10 +152,25 @@ When the question is how a case should go or which clause wins (a policy ruling,
 | **escalate** | 0 (was 1) | ▒ 1 · 10% | ✓ 19 |
 
 **Excluded:** 2 (`failed_transient` 2), the same items on both sides.
-**Verdict:** kept (accepted) / kept (red-team repair) / dropped: <the report's reasons>
+**Verdict:** kept (accepted) / kept (red-team repair) / dropped: <the report's reasons>; fixed <changes.fixed>, broke <changes.broken>
 **Changed:** <the one change> because <the report's evidence>.
-**Cost:** $0.84 this round, $4.10 so far of the $20 cap.
+
+**How the decision changed** (v3 → v4)
+
+```diff
+ questions.late_delivery
+ {
+   "type": "noul",
+-  "instructions": "Is the request inside the return window, counting a late delivery's delay?",
++  "instructions": "Does the tracking line say the delivery was late, or does the customer claim a delay with no tracking line?",
+   "reads": ["state.message", "state.order.tracking"]
+ }
 ```
+
+**Cost:** $0.84 this round, $4.10 so far of the $20 cap.
+````
+
+**The decision diff** shows the person what the version changed, so the report's question names (in `by_question`, and in the chart's hover card where the host shows it) point at wording they can read. Diff the candidate against the base, by feature: each question, attribute or aggregation added, removed or changed, and the result. Show each changed feature whole, as pretty JSON in a `diff` block, with its changed lines marked (`-` old, `+` new) and each removed line just above the line that replaced it, so the person reads the question as the model sees it. Show an added or removed feature whole too. Leave out a round that changed nothing in the decision (a re-score), and leave out unchanged features: never the whole decision.
 
 The loss matrix is a heatmap of where the loss comes from: the loss the objective's weights put on each kind of wrong answer.
 
@@ -163,7 +178,7 @@ The loss matrix is a heatmap of where the loss comes from: the loss the objectiv
 - **Right cells:** `✓` and the count, from `confusion` (the cells whose `got` is the `expected`).
 - **Columns:** every outcome, plus `none` when some cases got no outcome (`got: null`).
 - With more than about six outcomes, list the shaded cells instead of drawing the whole matrix.
-- `confusion` keeps the 400 largest cells. When `confusion_total` is larger, a cell missing from it isn't zero: say the matrix is cut. Take a missing wrong cell's count from `by_mistake` when it's there. Work out a missing right cell's count from `outcomes` (its `recall` × how often it was expected, rounded to a whole number).
+- `confusion` lists every cell with a case and `by_mistake` every wrong one, so a cell missing from them is zero.
 
 The priority row shows the outcome the objective's `priority` names (with two outcomes), or the outcome whose mistakes cost most. Add a `Target` row only when the person set one, with `target_met`. Show `excluded` only when it isn't empty. In the improve flow, one table per label source that was scored, the deciding one first, named in its title. Keep the version numbers (v1, v2, …) the same in every report, the decision file's commits and `work/runs.json`.
 
