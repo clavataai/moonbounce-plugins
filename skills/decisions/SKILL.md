@@ -1,6 +1,6 @@
 ---
 name: decisions
-description: "Use when calling the Moonbounce Decisions MCP or API: build a decision from a policy (the build flow) or improve one in use (the improve flow), resuming where the brief says; define/register/evaluate a decision, read back or list decisions, versions, evaluations and labeled cases, import labeled examples or send feedback, score a dataset, backtest, set the objective, pick a model, check cost."
+description: "Use when calling the Moonbounce Decisions MCP or API: build a decision from a policy, labeled data or a description (the build flow) or improve one in use (the improve flow), resuming where the brief says; define/register/evaluate a decision, read back or list decisions, versions, evaluations and labeled cases, import labeled examples or send feedback, score a dataset, backtest, set the objective, pick a model, check cost."
 ---
 
 # Moonbounce Decisions
@@ -38,7 +38,7 @@ List tools, find the description matching the task, and read its `inputSchema` f
 
 | Task | What to look for in a tool description | Read when doing this task |
 | --- | --- | --- |
-| Build a decision from a policy | No single tool: the build flow, below. | [The build flow](references/build.md) |
+| Build a decision, with or without a written policy | No single tool: the build flow, below. | [The build flow](references/build.md) |
 | Improve a decision in use | No single tool: the improve flow, below. | [The improve flow](references/improve.md) |
 | Design a structure | No tool: which facts are attributes, which judgments are questions, which aggregation fits the policy. | [Design a structure](references/design.md) |
 | Define a structure | Write JSON in the caller's repo; find “Validate a decision file” (“without registering anything”) to check it publicly, without a key. | [Define a structure](references/tasks.md#define-a-structure) |
@@ -70,7 +70,7 @@ Review-queue tools serve human reviewers; agents rarely need them. These files s
 
 A person's agent does two things with Moonbounce:
 
-- **The build flow makes a new decision from a policy.** The brief is what the first structure comes from.
+- **The build flow makes a new decision,** from a policy, labeled data or only a description. The brief is what the first structure comes from, and it is the policy from then on.
 - **The improve flow improves a decision in use.** The structure exists, and real feedback is the main signal.
 
 Both are lists of named stages, and both end in the same [refine loop](references/refine.md), judged by the decision's objective. Each stage says when it is done, and some stop for the person. A flow uses a team of fresh subagents, so no agent grades its own work.
@@ -128,6 +128,8 @@ Three messages always have the same shape, so the person can compare rounds and 
 
 **Cost:** $0.84 this stage, $4.10 so far of the $20 cap.
 ```
+
+When the question is how a case should go or which clause wins (a policy ruling, a probe, a label to settle), leave out **Options**: ask what the person would decide and why, and give your recommendation only once they answer or ask for it. A recommendation shown first tends to be accepted, which hides what they think.
 
 **After each scored candidate in the refine loop**, report the round as a table, base beside candidate, then the candidate's loss matrix, then one line each for the verdict, the change and the cost:
 

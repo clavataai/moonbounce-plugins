@@ -1,9 +1,9 @@
 ---
-description: Build a Moonbounce decision from a policy, or resume it at the stage its brief records
+description: Build a Moonbounce decision from a policy, labeled data or a description, or resume it at the stage its brief records
 argument-hint: <decision_id>
 ---
 
-Run the build flow, which builds a decision from a policy, for the Moonbounce decision `$ARGUMENTS`.
+Run the build flow, which builds a new decision from a policy, labeled data or a description, for the Moonbounce decision `$ARGUMENTS`.
 
 If no decision id was given, ask for one: a lowercase id such as `refund-exception`. Then use the `decisions` skill: read its "Flows" section and its build guide, `references/build.md`, and follow them.
 

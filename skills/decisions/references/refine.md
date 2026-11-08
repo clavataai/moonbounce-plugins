@@ -4,7 +4,7 @@ Both flows end in this loop. The build flow ([build.md](build.md)) runs it over 
 
 ## Roles
 
-The **author** edits the structure, and you (the orchestrator) score it. Scoring is mechanical, so you can do it yourself. The author never scores its own version and never reads a set it hasn't been given:
+The **author** edits the structure, and you (the orchestrator) score it. Scoring is mechanical, so you can do it yourself, or give it to a subagent on a smaller, cheaper model. Brief a fresh author each round with the brief, its notes and the round's report summary, and have it edit the decision file in place, one change per candidate (except the batched cuts below): a long-lived author re-reads every earlier round and re-emits the whole structure each time. The author never scores its own version and never reads a set it hasn't been given:
 
 - In the build flow, the author is given the repo's dataset and never the blind set.
 - In the improve flow, the author is given the decision's cases.
@@ -56,7 +56,7 @@ cat moonbounce/<decision_id>.examples.jsonl moonbounce/work/<decision_id>/red-*.
   jq -c --argjson ids '["<id>", "<id>"]' 'select(.item_id as $i | $ids | index($i))'
 ```
 
-A usual round: the roll-ups, then the rows of the costliest cell or the most-blamed question, then those items by id, plus a spread sample of right rows. Before a change aimed at particular wrong cases, read the right cases nearest each one (`like`, 5 to 10 rows) and their content, and check the change still gives them the right outcome. Give the author what you read that bears on the change, with labels and reasons, and the roll-ups. Read more whenever you're not sure why the version gets something wrong.
+A usual round: the roll-ups, then the rows of the costliest cell or the most-blamed question, then those items by id, plus a spread sample of right rows. Before every change aimed at particular wrong cases, including the fixes after a red-team round, read the right cases nearest each one (`like`, 5 to 10 rows) and their content, and check the change still gives them the right outcome. Give the author what you read that bears on the change, with labels and reasons, and the roll-ups. Read more whenever you're not sure why the version gets something wrong.
 
 ## Keep or drop a change
 
@@ -90,6 +90,9 @@ Read the report top down. Each roll-up points at one kind of change. Before re-w
 | `by_question` or `answer_conflicts` on a question about a fact the state already holds (an amount, days, a count, a flag) | Make the fact an attribute derived from its state path (`from`) that a rule or cut compares exactly, and drop the question ([Facts are attributes](design.md#facts-are-attributes-judgment-is-a-question)). The app's call doesn't change, and stored cases recompute it from their saved state, so score it like any candidate. If the app already sends that attribute in `attribute_values`, see [Switching an attribute the app already sends](design.md#facts-are-attributes-judgment-is-a-question) first | Fewer: the question goes |
 | `failed`: permanent failures | Check `reads` against the inputs the app always sends, and read an optional field through its parent | No |
 | A label that contradicts the brief | Fix the label or the brief, not the structure: go back to `labels` (build) or `brief_check` (improve) | No |
+| A mistake the brief doesn't settle (the version's answer and the label differ, and no clause decides which is right) | Ask the person before changing the structure: in the build flow, put a few probes about it to them ([build.md](build.md#brief)), labeled blind; the answers change the brief | No |
+| A case wrong in two or more kept versions in a row, especially one labeled `unknown` | Take it to the person as a possible wrong label before another change aims at it: show the case and its reason, without your view first | No |
+| One question rewritten in two or more rounds and still in `by_question` | It likely carries too many criteria: split it into narrower questions, each one call the model can make steadily, before rewriting it again | Yes (the new questions) |
 
 **Numbers come before questions.** Cut points and weights cost nothing to change. A question change costs model calls on every case. So try the numbers the report points at before rewriting a question, and change one thing per candidate so the report can tell you what it did. The one exception: in the build flow, where every re-score asks every question again, batch the cut moves that each passed `sweep_cut`'s `cross_validation` into one candidate.
 
