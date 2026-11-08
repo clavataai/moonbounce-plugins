@@ -78,7 +78,7 @@ Done when you can say how many usable cases there are, how many were dropped and
 Run [the refine loop](refine.md). Backtest each candidate against the last kept version (at first, the baseline) on the same cases, with the runs a preview would make but kept so you can page them:
 
 1. **The kept version**: `create_run` with `cases`, its registered hash in `structure_hash`, and `refresh` set to its questions that the candidate rewords or drops. Reuse its runs from the last comparison only when the cases, the `refresh` set and the kept version are all the same and the runs haven't expired. A different `refresh` set changes which answers the base replays, so score the base again.
-2. **The candidate**: `create_run` with `cases`, the structure inline in its first run and its `structure_hash` in the rest (a dry run takes it while one of its runs lives), over the same cases.
+2. **The candidate**: `create_run` with `cases`, the structure as `structure_changes` against the kept version in its first run (only what changed: [refine.md](refine.md#score-a-version)) and the `structure_hash` that run reports in the rest (a dry run takes it while one of its runs lives), over the same cases.
 3. **Judge** with `loss_report`, the kept version's runs as `base`.
 
 With more than 200 cases, page both versions over the same pages, in the same order (the same filters, then each `next_cursor`), and list every page's run on its side. Pages are cut by label, not by version, so the two sides line up.
@@ -91,7 +91,7 @@ Run each step once per label source that has cases, as in `baseline`, and judge 
 
 Score the synthetic set the same way, with dry runs over `items` (each chunk sent once, then `items_from` its latest run), judged by its own `loss_report`. When the deciding report and the rest disagree, the deciding report wins.
 
-Register each version you keep (`register_decision`), so it can be the next base. `create_preview` gives the same comparison in one call when you only need the headline: it has no run ids to page and doesn't split by label source.
+Register each version you keep (`register_decision` with its `structure_hash` alone, while one of its runs lives), so it can be the next base. `create_preview` gives the same comparison in one call when you only need the headline: it has no run ids to page and doesn't split by label source.
 
 ### `red_team`
 
