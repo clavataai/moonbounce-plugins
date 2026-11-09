@@ -15,7 +15,7 @@ At a **Stop**, show the person what the stage left and wait for their answer bef
 
 The brief is context here. When it exists, it settles which side is right when feedback conflicts, and a policy change updates it first. Reports show human-labeled and synthetic cases apart, and real data decides when they disagree.
 
-Use the key for the environment whose traffic you are improving, usually production. Scoring is always dry runs, and only these steps write: registering a structure (`register_decision`, at `baseline` and for each kept version), storing the objective (`set_objective`, before the first scoring when the stored one differs from the decision file's, and at `ship`), a label the person has you correct at `brief_check`, and `ship`. Registering changes nothing the decision runs.
+Use the key for the environment whose traffic you are improving, usually production. Scoring is always dry runs, which store no evaluation; each run keeps its results and labels for about a day, then they are gone, and a run of `items` (or `items_from`) also keeps its items' content when the decision keeps content (`items_kept`; a run of `cases` keeps none, since the cases are stored). Beyond those runs, only these steps write: registering a structure (`register_decision`, at `baseline` and for each kept version), storing the objective (`set_objective`, before the first scoring when the stored one differs from the decision file's, and at `ship`), a label the person has you correct at `brief_check`, and `ship`. Registering changes nothing the decision runs.
 
 Two writes change what a decision in use does, so each is a **Stop**: say what it changes, and wait for the person's yes.
 
