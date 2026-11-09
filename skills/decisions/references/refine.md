@@ -118,11 +118,11 @@ Read as much as you need to understand what the version gets wrong and why, and 
 | **The items themselves, by id** | In the build flow, rows carry `item_id`s: pick those lines from the dataset and the red rounds with jq (below). In the improve flow, rows over case runs carry evaluation ids: `list_cases` with `evaluation_ids` (comma-separated) and `include=content`, 50 a call | Reading the content, labels and reasons behind the rows you chose |
 | **Everything** | `{kind: "all"}` paged, the whole dataset file, or every case with `list_cases` paged | A small set (a few hundred items), or when nothing narrower answers your question. For a large one, a script that reads the file or the REST API keeps the bulk out of your context, and you read what it finds |
 
-Picking dataset lines by id (they come back in file order). The second command is for while a red round's cases aren't in the dataset yet: it reads that round's file after the dataset.
+Picking dataset lines by id (they come back in file order): write the ids as a JSON array to `moonbounce/scratch/<decision_id>/pick-ids.json` with the file tool, fresh each time, never into the command ([Stay inside the repo](../SKILL.md#where-a-flow-stands)). The second command is for while a red round's cases aren't in the dataset yet: it reads that round's file after the dataset.
 
 ```sh
-jq -c 'select(.item_id | IN("<id>", "<id>"))' moonbounce/<decision_id>.examples.jsonl
-jq -c 'select(.item_id | IN("<id>", "<id>"))' moonbounce/<decision_id>.examples.jsonl moonbounce/work/<decision_id>/red-<n>.jsonl
+jq -cs '.[0] as $ids | if ($ids | type) != "array" then error("the ids file is missing or not a JSON array") else .[1:][] | select(.item_id | IN($ids[])) end' moonbounce/scratch/<decision_id>/pick-ids.json moonbounce/<decision_id>.examples.jsonl
+jq -cs '.[0] as $ids | if ($ids | type) != "array" then error("the ids file is missing or not a JSON array") else .[1:][] | select(.item_id | IN($ids[])) end' moonbounce/scratch/<decision_id>/pick-ids.json moonbounce/<decision_id>.examples.jsonl moonbounce/work/<decision_id>/red-<n>.jsonl
 ```
 
 A usual round: the summary, the roll-ups, then the rows of the costliest cell or the most-blamed question, then those items by id, plus a spread sample of right rows. Before every change aimed at particular wrong cases, including the fixes after a red-team round, read the right cases nearest each one (`like`, 5 to 10 rows) and their content, and check the change still gives them the right outcome. Give the author what you read that bears on the change, with labels and reasons, and the roll-ups. Read more whenever you're not sure why the version gets something wrong.
