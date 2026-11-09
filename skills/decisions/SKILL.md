@@ -206,7 +206,7 @@ The loss matrix is a heatmap of where the loss comes from: the loss the objectiv
 **Show one report, not two.**
 
 - **A terminal or IDE** (Claude Code, Codex: CLI, desktop or IDE extension) draws no chart inline: show the text matrix (the scorer's table) and the **Chart** line.
-- **A chat app that draws MCP Apps** (the Claude apps, ChatGPT): the chart is the report. It draws only for a `loss_report` call made in the main conversation, never a subagent's, so make that call yourself over the scored runs. Show the headline table, the **Verdict**, **Changed** and **Cost** lines, and leave out the text matrix and the decision diff, which the chart shows.
+- **A chat app that draws MCP Apps** (the Claude apps, ChatGPT): the chart is the report. It draws only for a `loss_report` call with `show: true` made in the main conversation, never a subagent's, so make that call yourself over the scored runs, once per report you show (a version beside its base, or the first version alone). Leave `show` out of every other `loss_report` call (a summary for a verdict, a `cases` lookup, a scorer's calls): those draw nothing. Show the headline table, the **Verdict**, **Changed** and **Cost** lines, and leave out the text matrix and the decision diff, which the chart shows.
 - **When you can't tell,** ask the person once which they see, and record it in the brief's front matter as `report: chart` or `report: text`.
 
 The text matrix:
