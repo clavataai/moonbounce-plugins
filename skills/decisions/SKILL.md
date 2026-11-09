@@ -108,24 +108,32 @@ Update `stage` and `date` when a stage is done. Going back a stage is allowed: e
 
 **Committing is the person's call.** When a flow starts, ask once whether they want you to commit as you go (after each stage and each kept version) or to leave committing to them, and if you are to commit, on which branch: suggest `moonbounce/<decision_id>`, and use the one they name. Record it as `commits: <branch>` or `commits: none`. With a branch, create it from the current one at the first commit (or switch to it when it exists), commit only there, and never push. Commit only this decision's files, by path (`git add moonbounce/<decision_id>.* moonbounce/work/<decision_id>/`), never other decisions' files or the person's other changes, and ask before switching branches when they have uncommitted changes outside `moonbounce/`. Without an answer, it is `none`: write the files and leave git alone, branches included. Every file the flow writes stays in the repo either way, so a flow resumes from the files alone.
 
-**Stay inside the repo.** The person's agent asks them to approve each command it can't check, and a command that reaches outside the repo or hides its target can't be approved once for good. So run every command from the folder that holds `moonbounce/`, on relative paths. Every file you or a subagent writes stays under `moonbounce/`, apart from app changes the person approved: scratch scripts and intermediate files go in `moonbounce/scratch/<decision_id>/`, never in `/tmp`; they are never committed and are deleted when the stage is done. Don't wrap commands in `cd … &&` or use `git -C`, and don't assign shell variables or use `$(…)` in a command; jq's own `$` variables are fine. Never write an API key into a file. Reading this skill's own files is fine. Put this rule in every subagent's prompt.
+**Stay inside the repo, one plain command at a time.** The person's agent asks them to approve each command it can't check, and a command that reaches outside the repo, hides its target or carries data inline can't be approved once for good, so it stops the flow every time. So run every command from the folder that holds `moonbounce/`, on relative paths. Every file you or a subagent writes stays under `moonbounce/`, apart from app changes the person approved: scratch scripts and intermediate files go in `moonbounce/scratch/<decision_id>/`, never in `/tmp`; they are never committed and are deleted when the stage is done. Write files with your file tools (Write and Edit in Claude Code), never through the shell: a heredoc (`cat > file <<'EOF'`) or an `echo` of JSON asks every time; a `jq` over named files, redirected to a file under `moonbounce/`, is fine, and so is a `cp` between files under `moonbounce/`. Never redirect onto a file the command reads, since the shell empties it first: write to scratch, then `cp` it over. Run one plain command at a time: no `cd` or `git -C`, no `;` or `&&` chains, loops, shell variables, `$(…)` or `2>/dev/null`; jq's own `$` variables are fine. In jq, write ids and hashes into the filter (`select(.item_id | IN("c-1", "c-2"))`) rather than passing them with `--arg`, `--argjson` or `--slurpfile`. The guides' commands follow this: run them as written, changing only paths, ids and hashes. Never write an API key into a file. Reading this skill's own files is fine. Put this rule in every subagent's prompt.
 
 ### What the person sees
 
 Three messages always have the same shape, so the person can compare rounds and knows where to look. Everything else (drafting the brief, explaining a mistake, proposing an attribute) is ordinary conversation.
 
-**Ask through the host's question dialog when it has one** (Claude Code's AskUserQuestion: up to 4 questions a call, 2 to 4 options each, a note on each answer). The person picks instead of typing, which matters most for labels:
+**Ask through the host's question dialog when it has one** (Claude Code's AskUserQuestion: up to 4 questions a call, which the host shows one at a time; 2 to 4 options a question, plus "Other" for free text). The person picks instead of typing, and **sees one question at a time**, never a batch to answer in one go. Questions that don't depend on each other share a call, up to 4 (a round's probes, the severities, a sample of labels); a question whose answer changes what you'd ask next gets its own call.
 
-- **A probe or a label to settle:** the case in the question's text (the message and the facts that matter), each outcome an option in a fixed order with no recommendation, and their reason in the answer's note. Up to 4 cases a call. A label the person gives needs its `reason`: when an answer comes back without one, ask for it in text.
-- **A Stop:** the question, with the options listed under **Options**.
-- **Fall back to text** when the host has no dialog, or when a question has more than 4 outcomes.
+- **Each option says what it writes.** The option's description names its effect: a severity's weight ("Costly: weight 3, about three normal mistakes"), what an outcome means, what a target allows.
+- **The dialog asks only for the choice.** It has no field for a reason, and "Other" replaces the choice, so never ask for the why inside it.
+- **One line of feedback per answer**, after the call and before the next one: what you took from it, what it changed (the weight written, the clause added, the case settled), and the reason you will record, worded as your reading ("I'll note it as 'a change of mind costs us the item'; tell me if that's not why"). When the reading adds or changes a rule in the brief, say so in that line ("this adds a rule: …"), so letting it stand is a real yes. The person sees their answer land and corrects the reason in a few words only when it's wrong. A label the person gives needs its `reason`, and this drafted, uncorrected reading is it.
+- **Ask for a reason in text only where you can't guess it:** a label that goes against the brief or against one of their earlier calls, a probe answer that adds a rule, or a costly or unacceptable severity whose why the brief's Mistakes section needs. One short question, right after that answer. At the end of a stage, one question for anything they want to add is fine.
+- **What goes in a dialog:**
+  - **The objective:** the outcome names first, since the severities name them; then each severity (one question per mistake, a right answer and a wrong one, up to 4 a call), the fallback, the target and commits. The spending cap comes when you give the cost estimate (a few amounts, with "Other").
+  - **A probe or a label to settle:** the case in the question's text (the message and the facts that matter), each outcome an option in a fixed order with no recommendation.
+  - **A Stop:** the question states in plain words what the stage wrote (the numbers, the choices made), without the word "Stop", and the options are the ways on, your recommendation first and marked (Recommended), plus one to change something first. When that makes more than 4, leave that one out: the dialog's "Other" covers a change.
+- **Fall back to text** when the host has no dialog, or when a question has more than 4 outcomes, and then ask one question per message.
 
 **Every way out of a stage that ends in a Stop is the person's choice**, and so is every move back: after `refine`, on to `red_team` or finish; after a red-team round, back to `refine`, another round, on to `blind_check` or finish; after `blind_check`, back to `refine` or on to `import`. Show what the stage found, recommend, and let the person choose, even when the guide names the usual next stage. A stage that ends without a Stop (`cases`, `structure`) moves on when its done-when holds.
+
+**Talk to the person in their words, not this guide's.** "Stop" is the guide's word for a point where you wait for them; never write it to them, in a dialog or in text, including in passing ("I'll bring you the Stop again"). Say what happens instead: "I'll bring you the updated objective to confirm." The same goes for the guide's other terms: say "cost so far", not "the Cost line"; describe a stage the first time you name it ("`red_team`: another model tries to break the decision"). Name a finished stage in plain words: "The objective is set.", "The brief is ready for you to check."
 
 **At a Stop**, use these three parts, in this order:
 
 ```markdown
-**Stop: `<stage>` is done.**
+**<The stage, in plain words>: done.**
 
 **What this stage left:** the files written or changed, and the numbers that matter (cases, labels, loss).
 
@@ -138,7 +146,7 @@ Three messages always have the same shape, so the person can compare rounds and 
 **Cost:** $0.84 this stage, $4.10 so far of the $20 cap.
 ```
 
-When the question is how a case should go or which clause wins (a policy ruling, a probe, a label to settle), leave out **Options**: ask what the person would decide and why, and give your recommendation only once they answer or ask for it. A recommendation shown first tends to be accepted, which hides what they think.
+When the question is how a case should go or which clause wins (a policy ruling, a probe, a label to settle), leave out **Options**: ask what the person would decide (the reason as [the dialog rules](#what-the-person-sees) say: drafted by you, asked for only where you can't guess it), and give your recommendation only once they answer or ask for it. A recommendation shown first tends to be accepted, which hides what they think.
 
 **After each scored candidate in the refine loop**, report the round as a table, base beside candidate, then the candidate's loss matrix, then one line each for the verdict and the change, the decision diff, and the cost:
 
@@ -198,7 +206,7 @@ The text matrix:
 - **Right cells:** `✓` and the count, from `confusion` (the cells whose `got` is the `expected`).
 - **Rows and columns:** the same words as the chart, rows actual and columns predicted, every outcome in the order of the report's `outcomes`, plus a `none` column when some cases got no outcome (`got: null`).
 - With more than about six outcomes, list the shaded cells instead of drawing the whole matrix.
-- `confusion` lists every cell with a case and `by_mistake` every wrong one, so a cell missing from them is zero.
+- `confusion` lists every cell with a case and `by_mistake` every wrong one, each side's worst or largest 1,000 at most (both sides and both matrices list what either keeps, so a list can hold a few thousand), so a cell missing from them is zero unless `confusion_total` or `by_mistake_total` is larger than the list.
 
 The priority row shows the outcome the objective's `priority` names (with two outcomes), or the outcome whose mistakes cost most. Add a `Target` row only when the person set one, with `target_met`. Show `excluded` only when it isn't empty. In the improve flow, one table per label source that was scored, the deciding one first, named in its title.
 

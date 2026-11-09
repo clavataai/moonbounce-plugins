@@ -74,7 +74,7 @@ Then add targeted synthesis where real cases are thin:
 - new policy clauses;
 - regression probes for a change you plan.
 
-Use a fresh case writer and a fresh labeler, as in the build flow's [`cases`](build.md#cases) and [`labels`](build.md#labels) stages. Write the result to `moonbounce/<decision_id>.synthetic.jsonl`, with `label_source: "synthetic"` (or `human` where the person settled the label). These lines stay in the repo. They are scored with dry runs over `items` (or `items_from` an earlier run over the same items, [refine.md](refine.md#score-a-version)), apart from the real cases, and never imported among the real cases.
+Use fresh case writers and a fresh labeler, as in the build flow's [`cases`](build.md#cases) and [`labels`](build.md#labels) stages, with three differences: size the set to the cases above, not five a clause; there is no person's data to put in first; and each writer takes its own hundred of item ids above the highest `syn-` id already in the synthetic file, and their files merge into it, never into the build dataset. Write the result to `moonbounce/<decision_id>.synthetic.jsonl`, with `label_source: "synthetic"` (or `human` where the person settled the label). These lines stay in the repo. They are scored with dry runs over `items` (or `items_from` an earlier run over the same items, [refine.md](refine.md#score-a-version)), apart from the real cases, and never imported among the real cases.
 
 Done when you can say how many usable cases there are, how many were dropped and why, and what the synthetic set adds.
 

@@ -25,15 +25,13 @@ Each candidate is one change (except the batched cuts below), kept in `moonbounc
 - **A candidate's first run sends only what changed,** as `structure_changes: {base_hash, changes}` ([Score a version](#score-a-version)). Derive it from the two files with jq rather than writing it out: whole features that differ or are new, `null` for removed ones, and `result` when it changed.
 
   ```sh
-  jq -n --slurpfile base <base file> --slurpfile cand <candidate file> --arg h <base structure_hash> '
-    $base[0].structure as $B | $cand[0].structure as $C
-    | {base_hash: $h, changes: (
+  jq -s '.[0].structure as $B | .[1].structure as $C
+    | {base_hash: "<base structure_hash>", changes: (
         reduce ("questions", "attributes", "aggregations") as $s ({};
           ([($C[$s] // {} | to_entries[] | select($B[$s][.key] != .value) | {(.key): .value}),
             ($B[$s] // {} | keys_unsorted[] | . as $k | select($C[$s] // {} | has($k) | not) | {($k): null})] | add) as $d
           | if $d then . + {($s): $d} else . end)
-        + (if $C.result != $B.result then {result: $C.result} else {} end))}' \
-    > moonbounce/scratch/<decision_id>/<round>-<letter>.changes.json
+        + (if $C.result != $B.result then {result: $C.result} else {} end))}' <base file> <candidate file> > moonbounce/scratch/<decision_id>/<round>-<letter>.changes.json
   ```
 
   The changes file is usually a few hundred bytes, against tens of kilobytes for the whole structure. The run reports the merged structure's hash, which later runs of the candidate send; it is the candidate file's hash too (the hash ignores key order). When the changes come out empty (`"changes": {}`), the candidate is its base: don't score it.
@@ -53,18 +51,16 @@ Each candidate is one change (except the batched cuts below), kept in `moonbounc
   ```
 
 - **Stack candidates only when a change needs the one before it.** In a stack, each is scored against the one before, with that candidate's merged hash (from its run) as `base_hash`. When one is dropped, the ones built on it carry its change, so drop them too or have the author rewrite them from the last kept version.
-- **When a candidate is kept,** register it by its hash ([Keep or drop a change](#keep-or-drop-a-change)) and copy its file over the decision file. A kept combination has no file of its own: rebuild it from the last kept file and the combined changes. Rebuild too when the author reordered features, so the file's order matches the registered version (the version keeps the run's copy: a replaced feature stays in the base's place and a new one goes last, and engines ask questions in that order). The base file is the file of the version the changes were made against: the decision file for a sibling or a combination, the previous candidate's file for a stack link. Write the rebuild to scratch, then copy it over the decision file: never redirect onto a file the command reads, because the shell empties it before jq reads it.
+- **When a candidate is kept,** register it by its hash ([Keep or drop a change](#keep-or-drop-a-change)) and copy its file over the decision file. A kept combination has no file of its own: rebuild it from the last kept file and the combined changes. Rebuild too when the author reordered features, so the file's order matches the registered version (the version keeps the run's copy: a replaced feature stays in the base's place and a new one goes last, and engines ask questions in that order). The base file is the file of the version the changes were made against: the decision file for a sibling or a combination, the previous candidate's file for a stack link. Write the rebuild to scratch, then copy it over the decision file with `cp`, in a second command: never redirect onto a file the command reads, because the shell empties it before jq reads it.
 
   ```sh
-  jq -n --slurpfile base <base file> --slurpfile ch <changes file> '
-    $ch[0].changes as $c
-    | $base[0] | .structure |= (
+  jq -s '.[1].changes as $c
+    | .[0] | .structure |= (
         reduce ("questions", "attributes", "aggregations") as $s (.;
           reduce (($c[$s] // {}) | to_entries[]) as $e (.;
             if $e.value == null then del(.[$s][$e.key]) else .[$s][$e.key] = $e.value end))
-        | if $c | has("result") then .result = $c.result else . end)' \
-    > moonbounce/scratch/<decision_id>/<round>-kept.json &&
-    cp moonbounce/scratch/<decision_id>/<round>-kept.json moonbounce/<decision_id>.json
+        | if $c | has("result") then .result = $c.result else . end)' <base file> <changes file> > moonbounce/scratch/<decision_id>/<round>-kept.json
+  cp moonbounce/scratch/<decision_id>/<round>-kept.json moonbounce/<decision_id>.json
   ```
 
 ### The scorer
@@ -96,7 +92,7 @@ Never score by hand, and never pass the results back yourself. Pass `run_id`s so
   - A preview (`create_preview`) is two of these runs and a `loss_report` in one call, over the newest 500 cases. It returns compact reports with no `run_id`s to page and no split by label source, so the improve flow scores with the runs themselves.
 - **Judge.**
   - Call `loss_report` with `{candidate: {run_ids}, base: {run_ids}}`. Over MCP it answers the summary (over REST or the SDK, send `detail: "summary"` for it): `accepted` and `reasons`, each side's `loss_per_case`, `macro_f1`, `accuracy`, `n` and its three costliest mistake cells, `changes` as counts, `objective`, `excluded` and `report_url`. Read the verdict from it. `detail: "full"` answers the whole report, with the roll-ups below; ask for it only when you need them, and pass on the parts you need, not the report.
-  - With a base, `changes` says how many cases the candidate `fixed`, `broken` (right under the base, wrong now) and `moved` (to another wrong outcome); the full report also lists every move by cell in `moves`. A lower loss can hide what it broke, so read `broken` before keeping a change, and list them with `cases: {filter: {kind: "changed"}}`, which returns every row whose outcome changed: the broken ones are those whose `base.got` equals `expected`.
+  - With a base, `changes` says how many cases the candidate `fixed`, `broken` (right under the base, wrong now) and `moved` (to another wrong outcome); the full report also lists each move by cell in `moves` (the commonest 1,000; `moves_total` counts them all). A lower loss can hide what it broke, so read `broken` before keeping a change, and list them with `cases: {filter: {kind: "changed"}}`, which returns every row whose outcome changed: the broken ones are those whose `base.got` equals `expected`.
   - When both sides are runs it also returns `report_url`, the report as a chart in the web app: print it in the round report (SKILL.md), never fetch it.
   - Page through the cases behind a roll-up with `cases: {filter: {kind: "wrong"}}` (or `cases: {filter, sample: n}` for a spread of n of them). The other kinds are `severe`, `changed`, `missing_criterion`, `{kind: "cell", expected, got?}`, `{kind: "question", question}`, `{kind: "near_cut", at}` and `{kind: "like", item_id}` (the rows nearest one row).
   - Price base and candidate on the same items. Items the base lacks are counted in `excluded.no_base` and left out, so when the dataset grows, score the base on the new items too and add that run to its `run_ids`.
@@ -122,11 +118,11 @@ Read as much as you need to understand what the version gets wrong and why, and 
 | **The items themselves, by id** | In the build flow, rows carry `item_id`s: pick those lines from the dataset and the red rounds with jq (below). In the improve flow, rows over case runs carry evaluation ids: `list_cases` with `evaluation_ids` (comma-separated) and `include=content`, 50 a call | Reading the content, labels and reasons behind the rows you chose |
 | **Everything** | `{kind: "all"}` paged, the whole dataset file, or every case with `list_cases` paged | A small set (a few hundred items), or when nothing narrower answers your question. For a large one, a script that reads the file or the REST API keeps the bulk out of your context, and you read what it finds |
 
-Picking dataset lines by id (they come back in file order):
+Picking dataset lines by id (they come back in file order). The second command is for while a red round's cases aren't in the dataset yet: it reads that round's file after the dataset.
 
 ```sh
-cat moonbounce/<decision_id>.examples.jsonl moonbounce/work/<decision_id>/red-*.jsonl 2>/dev/null |
-  jq -c --argjson ids '["<id>", "<id>"]' 'select(.item_id as $i | $ids | index($i))'
+jq -c 'select(.item_id | IN("<id>", "<id>"))' moonbounce/<decision_id>.examples.jsonl
+jq -c 'select(.item_id | IN("<id>", "<id>"))' moonbounce/<decision_id>.examples.jsonl moonbounce/work/<decision_id>/red-<n>.jsonl
 ```
 
 A usual round: the summary, the roll-ups, then the rows of the costliest cell or the most-blamed question, then those items by id, plus a spread sample of right rows. Before every change aimed at particular wrong cases, including the fixes after a red-team round, read the right cases nearest each one (`like`, 5 to 10 rows) and their content, and check the change still gives them the right outcome. Give the author what you read that bears on the change, with labels and reasons, and the roll-ups. Read more whenever you're not sure why the version gets something wrong.
@@ -135,7 +131,7 @@ A usual round: the summary, the roll-ups, then the rows of the costliest cell or
 
 Keep a candidate when both of these hold:
 
-- **The report accepts it.** `accepted` is true, with the last kept version as the base: lower loss per case, and no new severe mistake on a human-labeled case.
+- **The report accepts it.** `accepted` is true, with the last kept version as the base: lower loss per case, no new severe mistake on a human-labeled case, and at least 80% of the items scored (resend the retryable failures when fewer were).
 - **It adds no severe mistake on any label.** The no-new-severe-mistake rule counts only `human` labels, so when most labels are synthetic, also page the severe cases (`cases: {filter: {kind: "severe"}}`). Drop the candidate when any row has `base.severe: false`: a case the base got right is now one of the objective's severe mistakes, whatever its label.
 
 **A repair after a red-team round (the improve flow).** Real labels may already be right, so a candidate that only fixes red cases leaves their loss unchanged, and `loss_report` won't accept it. Keep it when the synthetic report (the red rounds included) accepts it and, on the `human` runs and on the `unknown` runs, each judged apart, loss per case is no higher and no case the base got right is now a severe mistake. Its verdict is `kept (red-team repair)`; it applies only on a return from `red_team`.
