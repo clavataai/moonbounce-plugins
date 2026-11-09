@@ -1,18 +1,18 @@
 ---
 name: decisions
-description: "Use when calling the Moonbounce Decisions MCP or API: build a decision from a policy, labeled data or a description (the build flow) or improve one in use (the improve flow), resuming where the brief says; define/register/evaluate a decision, read back or list decisions, versions, evaluations and labeled cases, import labeled examples or send feedback, score a dataset, backtest, set the objective, pick a model, check cost."
+description: "Use when calling the Moonbounce Decisions MCP or API: build a decision from a policy, labeled data or a description (the build flow, with a quick mode that gets a first measured version running in about 25 minutes to improve on real traffic), or improve one in use (the improve flow), resuming where the brief says; define/register/evaluate a decision, read back or list decisions, versions, evaluations and labeled cases, import labeled examples or send feedback, score a dataset, backtest, set the objective, pick a model, check cost."
 ---
 
 # Moonbounce Decisions
 
-A decision is a JSON **structure**: `questions` a model answers over the call's `state` (each may list the `state.<key>` paths it `reads`, nested ones like `state.order.total` included), optional `attributes` the caller supplies, `aggregations` that combine them (weights, thresholds and cut points written in), and a `result` naming the final feature. Every reference inside a structure is a path: `questions.<name>`, `attributes.<name>` or `aggregations.<name>` (`"result": "aggregations.handling"`); a bare name is a 400. The caller's code owns the structure; Moonbounce runs it, records evaluations and learns from feedback. Imported examples, feedback, review and previews all take this shape.
+A decision is a JSON object: `questions` a model answers over the call's `state` (each may list the `state.<key>` paths it `reads`, nested ones like `state.order.total` included), optional `attributes` the caller supplies, `aggregations` that combine them (weights, thresholds and cut points written in), and a `result` naming the final feature. Each registered definition is a version of the decision (v1, v2…), named by its hash; one not yet registered is a candidate. Every reference inside a decision is a path: `questions.<name>`, `attributes.<name>` or `aggregations.<name>` (`"result": "aggregations.handling"`); a bare name is a 400. The caller's code owns the decision; Moonbounce runs it, records evaluations and learns from feedback. Imported examples, feedback, review and previews all take this shape.
 
 ## The smallest call
 
 Two calls that store nothing show the connection works. Use the tools, or REST with `Authorization: Bearer <key>`:
 
 1. `whoami` (`GET /v1/whoami`) returns the org, environment and scopes behind the key or sign-in. It reads nothing and spends nothing.
-2. A dry-run `evaluate` (`POST /v1/evaluate`) registers and stores nothing, spends one model call, and answers with `status`, `answers`, the `version` that ran (`number` is `null` while that structure isn't registered yet; a dry run registers nothing) and `cost`:
+2. A dry-run `evaluate` (`POST /v1/evaluate`) registers and stores nothing, spends one model call, and answers with `status`, `answers`, the `version` that ran (`number` is `null` while that version isn't registered yet; a dry run registers nothing) and `cost`:
 
 ```json
 {
@@ -23,7 +23,7 @@ Two calls that store nothing show the connection works. Use the tools, or REST w
 }
 ```
 
-Everything else here builds on that call: the structure grows aggregations and cut points, and dropping `dry_run` stores the evaluation. Then run the discovery routine below.
+Everything else here builds on that call: the decision grows aggregations and cut points, and dropping `dry_run` stores the evaluation. Then run the discovery routine below.
 
 ## Discovery routine — first, every session
 
@@ -39,14 +39,15 @@ List tools, find the description matching the task, and read its `inputSchema` f
 | Task | What to look for in a tool description | Read when doing this task |
 | --- | --- | --- |
 | Build a decision, with or without a written policy | No single tool: the build flow, below. | [The build flow](references/build.md) |
+| Get a decision running quickly, to improve on real traffic | No single tool: the build flow in quick mode, below. | [Quick mode](references/build.md#quick-mode) |
 | Improve a decision in use | No single tool: the improve flow, below. | [The improve flow](references/improve.md) |
-| Design a structure | No tool: which facts are attributes, which judgments are questions, which aggregation fits the policy. | [Design a structure](references/design.md) |
-| Define a structure | Write JSON in the caller's repo; its upload validates it and answers its hash. | [Define a structure](references/tasks.md#define-a-structure) |
-| Upload a file | `create_upload`: a URL that takes a dataset file or a structure file once, by `curl`; later calls name it by `upload_id` or `structure_hash`. | [Upload a file](references/tasks.md#upload-a-file) |
+| Design a decision | No tool: which facts are attributes, which judgments are questions, which aggregation fits the policy. | [Design a decision](references/design.md) |
+| Define a decision | Write JSON in the caller's repo; its upload validates it and answers its hash. | [Define a decision](references/tasks.md#define-a-decision) |
+| Upload a file | `create_upload`: a URL that takes a dataset file or a decision file once, by `curl`; later calls name it by `upload_id` or `structure_hash`. | [Upload a file](references/tasks.md#upload-a-file) |
 | Register it | “Register a decision's version” (“registers its structure as the decision's next version”). | [Register it](references/tasks.md#register-it) |
 | Read back or list | “Reads only” descriptions for decisions, their versions and past evaluations. | [Read back or list](references/tasks.md#read-back-or-list) |
 | Try without storing | Evaluate with `moonbounce.dry_run: true`: spends model calls, stores only usage. | [Dry run](references/tasks.md#dry-run) |
-| Evaluate | “Evaluates one item against a decision”: the structure inline or by hash. | [Evaluate](references/tasks.md#evaluate) |
+| Evaluate | “Evaluates one item against a decision”: the decision inline or by hash. | [Evaluate](references/tasks.md#evaluate) |
 | Add labeled data | “Imports labeled examples” (`import_examples`) and “Say what the right answer was” (`submit_feedback`). | [Add labeled data](references/tasks.md#add-labeled-data) |
 | Backtest a change | “Replays a structure change over past cases with feedback.” | [Backtest a change](references/tasks.md#backtest-a-change) |
 | Pick a model | “List the models a decision can run on” (`list_models`), “Get the model a decision runs on” (`get_model`) and “Choose the model a decision runs on” (`set_model`). | [Pick a model](references/tasks.md#pick-a-model) |
@@ -61,8 +62,8 @@ Review-queue tools serve human reviewers; agents rarely need them. These files s
 
 ## Five rules that bite
 
-1. Register a structure, or evaluate it inline once, before evaluating by its hash; an unknown hash is 404 `STRUCTURE_UNKNOWN`. A dry run is the exception: it also takes the hash of a structure a live upload or run of the decision holds in the same environment, without registering it, and `register_decision` registers one by that `structure_hash` alone ([Upload a file](references/tasks.md#upload-a-file)). A backtest does not register its candidate.
-2. Send the structure one way: inline or as `moonbounce.structure_hash`; both is a 400. Every path a question `reads` (`state.<key>`, `state.<key>.<key>`) must be in `state`, and every attribute without a default needs a value: in `attribute_values`, or at its `from` path in `state` for a derived one, which never goes in `attribute_values` (400 `CONTENT_INVALID`).
+1. Register a decision, or evaluate it inline once, before evaluating by its hash; an unknown hash is 404 `STRUCTURE_UNKNOWN`. A dry run is the exception: it also takes the hash of a candidate a live upload or run of the decision holds in the same environment, without registering it, and `register_decision` registers one by that `structure_hash` alone ([Upload a file](references/tasks.md#upload-a-file)). A backtest does not register its candidate.
+2. Send the decision one way: inline or as `moonbounce.structure_hash`; both is a 400. Every path a question `reads` (`state.<key>`, `state.<key>.<key>`) must be in `state`, and every attribute without a default needs a value: in `attribute_values`, or at its `from` path in `state` for a derived one, which never goes in `attribute_values` (400 `CONTENT_INVALID`).
 3. Read `status` before the result: `decided` carries `outcome`, `computed` carries `value`, `abstained` carries at most the `abstain` outcome.
 4. Feedback claims name a question (`expected_answer`) or an outcome the result can produce (`expected_outcome`), or approve/reject the returned outcome (`verdict`, never with `expected_outcome`), or flag broken content (`input_broken`); any other kind is a 400. Previews need a result that decides outcomes (`bands`, `rules` or `match`); a value result is 400 `OUTCOMES_INVALID`. For imported examples, address feedback by the example's evaluation `id` (`about.evaluation_id`); feedback by `item_id` binds to primary traffic only.
 5. Send an `idempotency-key` argument on writes except `fill_review_queue`, which takes none. A single-item dry run accepts one and ignores it, so a retried dry run runs, and is billed, again. A run (`create_run`) takes one. Reuse a key only to retry the same request.
@@ -71,12 +72,12 @@ Review-queue tools serve human reviewers; agents rarely need them. These files s
 
 A person's agent does two things with Moonbounce:
 
-- **The build flow makes a new decision,** from a policy, labeled data or only a description. The brief is what the first structure comes from, and it is the policy from then on.
-- **The improve flow improves a decision in use.** The structure exists, and real feedback is the main signal.
+- **The build flow makes a new decision,** from a policy, labeled data or only a description, and measures it before it ships. The brief is what the first version comes from, and it is the policy from then on. Its [quick mode](references/build.md#quick-mode) runs the same stages with less in each: a first measured version in about 25 minutes, then a pause to wire it in and improve it on real traffic. The build asks which at its start.
+- **The improve flow improves a decision in use.** It already runs in the app, and real feedback is the main signal.
 
-Both are lists of named stages, and both end in the same [refine loop](references/refine.md), judged by the decision's objective. Each stage says when it is done, and some stop for the person. A flow uses a team of fresh subagents, so no agent grades its own work.
+Each is a list of named stages. Each stage says when it is done, and some stop for the person. Both end in the same [refine loop](references/refine.md), judged by the decision's objective, and use a team of fresh subagents, so no agent grades its own work.
 
-When the person wants a decision built or improved, by a command (`/moonbounce:start`, `/moonbounce:build` or `/moonbounce:improve` in Claude Code), a prompt or in words, work out the flow and the stage first. Say which you picked and why, then read that flow's guide and follow it from that stage:
+When the person wants a decision built, started or improved, by a command (`/moonbounce:start`, `/moonbounce:build` or `/moonbounce:improve` in Claude Code), a prompt or in words, work out the flow and the stage first. Say which you picked and why, then read that flow's guide and follow it from that stage:
 
 1. **The person named a flow**: `/moonbounce:build` or `/moonbounce:improve` in Claude Code, the `build_decision` or `improve_decision` MCP prompt, or in words. Run that flow, resuming at the brief's `stage` when the brief records the same flow (a build paused in quick mode: [ask first](references/build.md#quick-mode)). When the build flow is named and the brief records the build flow at `done`, or the improve flow at any stage, ask before starting over: the build flow rewrites the brief. Suggest the improve flow instead. When the improve flow is named and the brief records the build flow unfinished, ask before replacing it; a finished build is where the improve flow starts, at `brief_check`, keeping the brief, and so is a build paused in quick mode, once its dataset is stored if it has no stored cases. An improve flow at `done` starts again at `brief_check`: improving a shipped decision is a new round.
 2. **No flow named, and the brief's `stage` isn't `done`:** resume that flow at that stage. A build paused in quick mode (`mode: quick` at `stage: red_team`) is a usable decision, not one in progress: [ask first](references/build.md#quick-mode).
@@ -85,8 +86,19 @@ When the person wants a decision built or improved, by a command (`/moonbounce:s
 
 | Flow | Guide | Stages |
 | --- | --- | --- |
-| Build | [build.md](references/build.md) | `objective`, `brief`, `cases`, `labels`, `structure`, `refine`, `red_team`, `blind_check`, `import` |
+| Build | [build.md](references/build.md) | `objective`, `brief`, `cases`, `first_version`, `refine`, `red_team`, `blind_check`, `import` |
 | Improve | [improve.md](references/improve.md) | `brief_check`, `baseline`, `cases`, `refine`, `red_team`, `ship` |
+
+**Read only the guide of the flow you are running.** Each guide links the shared files below at the step that needs them, saying when; open one only when you reach that step, never ahead of it:
+
+| Shared file | What it has | Read when |
+| --- | --- | --- |
+| [refine.md](references/refine.md) | The refine loop: scoring, label checks, keeping a change | Your flow reaches `refine` (build, improve), or `cases` takes a conflict to the person (its Check before you fit, step 4) |
+| [files.md](references/files.md) | The decision file, the brief, dataset lines, `rulings.jsonl`, `runs.json` | You write one of them for the first time in a flow |
+| [cases.md](references/cases.md) | Writing cases: hard cases first, the person's data, case writers, duplicates | Build or improve at `cases` |
+| [author.md](references/author.md) | The first version: the author, registering, the model and objective | Build at `cases` (the author starts alongside the case writers) |
+| [red-team.md](references/red-team.md) | Who writes a red-team round, splitting it across writers, settling its labels, keeping it | Build or improve at `red_team` |
+| [import.md](references/import.md) | Storing a dataset, resuming an import | Build at `import`, or the improve flow after a paused quick build |
 
 ### Where a flow stands
 
@@ -96,8 +108,8 @@ A flow's progress lives in the repo, in the brief's front matter, so a flow resu
 ---
 decision_id: refund-exception
 flow: build            # build or improve
-stage: labels          # the stage in progress, or done
-structure_hash: null   # the structure the brief was last checked against
+stage: cases           # the stage in progress, or done
+structure_hash: null   # the version the brief was last checked against
 date: 2026-11-06       # when stage or structure_hash last changed
 commits: none          # the person's choice: none, or the branch to commit on after each stage and kept version
 frozen: null           # build flow only: a sha256 of the brief's text below the front matter, when the blind set was written
@@ -105,8 +117,6 @@ mode: full             # build flow only: quick (a first measured version, then 
 report: null           # chart or text: how the person sees round reports, once known
 ---
 ```
-
-The build flow has a [quick mode](references/build.md#quick-mode): the same stages with less in each, pausing after the first measured version, in about 25 minutes instead of an hour or more. The build asks which at its start.
 
 Update `stage` and `date` when a stage is done. Going back a stage is allowed: each guide says which stages to re-run after it.
 
@@ -120,25 +130,26 @@ Update `stage` and `date` when a stage is done. Going back a stage is allowed: e
 
 `!!` marks files and folders the person's `.gitignore` keeps out: leave out every path that has a `!!` line or sits inside a folder that has one, even when another line names it too (files they stopped tracking print as `D ` beside the `!!`, and committing them would put their ignored copies back), and tell the person once which ones.
 
-**Stay inside the repo, one plain command at a time.** The person's agent asks them to approve each command it can't check, and a command that reaches outside the repo, hides its target or carries data inline can't be approved once for good, so it stops the flow every time. So run every command from the folder that holds `moonbounce/`, on relative paths. Every file you or a subagent writes stays under `moonbounce/`, apart from app changes the person approved: scratch scripts and intermediate files go in `moonbounce/scratch/<decision_id>/`, never in `/tmp`; they are never committed and are deleted when the stage is done. Write files with your file tools (Write and Edit in Claude Code), never through the shell: a heredoc (`cat > file <<'EOF'`) or an `echo` of JSON asks every time; a `jq` over named files, redirected to a file under `moonbounce/`, is fine, and so is a `cp` between files under `moonbounce/`. Never redirect onto a file the command reads, since the shell empties it first: write to scratch, then `cp` it over. Run one plain command at a time: no `cd` or `git -C`, no `;` or `&&` chains, loops, shell variables, `$(…)` or `2>/dev/null`; jq's own `$` variables are fine. Never put the person's data in a command, item ids above all: an id, a label, a reason or a message can hold any character, so one written into a jq filter can run as jq code, and one inside a quoted prompt can run as shell. Write the ids as a JSON array to a file named for its use in `moonbounce/scratch/<decision_id>/` (`pick-ids.json`, `drop-ids.json`), fresh right before the command that reads it, with the file tool or a `jq` that writes them there, and have jq read that file as its first input (`jq -cs '.[0] as $ids | if ($ids | type) != "array" then error("the ids file is missing or not a JSON array") else .[1:][] | select(.item_id | IN($ids[])) end' moonbounce/scratch/<decision_id>/pick-ids.json <file>`: the check stops it when the ids file is missing, which jq would otherwise skip, reading the first dataset line as the ids). Paths, decision ids (a letter, then lowercase letters, digits and `_ . -`), feature names, structure hashes (`sha256:` and hex), numbers and an upload's `url` follow fixed patterns, so they go straight into a command: a file goes up with `curl -sS -X PUT --data-binary @<path under moonbounce/> <url>` ([Upload a file](references/tasks.md#upload-a-file)). Don't pass anything with `--arg`, `--argjson` or `--slurpfile`. The guides' commands follow this: run them as written, changing only those. Never write an API key into a file. Reading this skill's own files is fine. The role prompts in the build and improve guides end with this rule's short form, the **commands rule**, and any other subagent you brief gets it too: "Work only inside the repo. Write files with your file tool, never with a heredoc or `echo`; a `cp` or a `jq` to a file under `moonbounce/` is fine, but never onto a file the command reads. Run one plain command at a time: no `cd`, `;` or `&&` chains, loops, shell variables, `$(…)` or heredocs. Never put the person's data or item ids in a command."
+**Stay inside the repo, one plain command at a time.** The person's agent asks them to approve each command it can't check, and a command that reaches outside the repo, hides its target or carries data inline can't be approved once for good, so it stops the flow every time. So run every command from the folder that holds `moonbounce/`, on relative paths. Every file you or a subagent writes stays under `moonbounce/`, apart from app changes the person approved: scratch scripts and intermediate files go in `moonbounce/scratch/<decision_id>/`, never in `/tmp`; they are never committed and are deleted when the stage is done. Write files with your file tools (Write and Edit in Claude Code), never through the shell: a heredoc (`cat > file <<'EOF'`) or an `echo` of JSON asks every time; a `jq` over named files, redirected to a file under `moonbounce/`, is fine, and so is a `cp` between files under `moonbounce/`. Never redirect onto a file the command reads, since the shell empties it first: write to scratch, then `cp` it over. Run one plain command at a time: no `cd` or `git -C`, no `;` or `&&` chains, loops, shell variables, `$(…)` or `2>/dev/null`; jq's own `$` variables are fine. Never put the person's data in a command, item ids above all: an id, a label, a reason or a message can hold any character, so one written into a jq filter can run as jq code, and one inside a quoted prompt can run as shell. Write the ids as a JSON array to a file named for its use in `moonbounce/scratch/<decision_id>/` (`pick-ids.json`, `drop-ids.json`), fresh right before the command that reads it, with the file tool or a `jq` that writes them there, and have jq read that file as its first input (`jq -cs '.[0] as $ids | if ($ids | type) != "array" then error("the ids file is missing or not a JSON array") else .[1:][] | select(.item_id | IN($ids[])) end' moonbounce/scratch/<decision_id>/pick-ids.json <file>`: the check stops it when the ids file is missing, which jq would otherwise skip, reading the first dataset line as the ids). Paths, decision ids (a letter, then lowercase letters, digits and `_ . -`), feature names, version hashes (`sha256:` and hex), numbers and an upload's `url` follow fixed patterns, so they go straight into a command: a file goes up with `curl -sS -X PUT --data-binary @<path under moonbounce/> <url>` ([Upload a file](references/tasks.md#upload-a-file)). Don't pass anything with `--arg`, `--argjson` or `--slurpfile`. The guides' commands follow this: run them as written, changing only those. Never write an API key into a file. Reading this skill's own files is fine. The role prompts in the guides end with this rule's short form, the **commands rule**, and any other subagent you brief gets it too: "Work only inside the repo. Write files with your file tool, never with a heredoc or `echo`; a `cp` or a `jq` to a file under `moonbounce/` is fine, but never onto a file the command reads. Run one plain command at a time: no `cd`, `;` or `&&` chains, loops, shell variables, `$(…)` or heredocs. Never put the person's data or item ids in a command."
 
 ### What the person sees
 
 Three messages always have the same shape, so the person can compare rounds and knows where to look. Everything else (drafting the brief, explaining a mistake, proposing an attribute) is ordinary conversation.
 
-**Ask through the host's question dialog when it has one** (Claude Code's AskUserQuestion: up to 4 questions a call, which the host shows one at a time; 2 to 4 options a question, plus "Other" for free text). The person picks instead of typing, and **sees one question at a time**, never a batch to answer in one go. Questions that don't depend on each other share a call, up to 4 (a round's probes, the severities, a sample of labels); a question whose answer changes what you'd ask next gets its own call.
+**Ask through the host's question dialog when it has one** (Claude Code's AskUserQuestion: up to 4 questions a call, which the host shows one at a time; 2 to 4 options a question, plus "Other" for free text). The person picks instead of typing, and **sees one question at a time**, never a batch to answer in one go. Questions that don't depend on each other share a call, up to 4 (a round's probes, the severities, the labels a refine round asks about); a question whose answer changes what you'd ask next gets its own call.
 
 - **Each option says what it writes.** The option's description names its effect: a severity's weight ("Costly: weight 3, about three normal mistakes"), what an outcome means, what a target allows.
 - **The dialog asks only for the choice.** It has no field for a reason, and "Other" replaces the choice, so never ask for the why inside it.
 - **One line of feedback per answer**, after the call and before the next one: what you took from it, what it changed (the weight written, the clause added, the case settled), and the reason you will record, worded as your reading ("I'll note it as 'a change of mind costs us the item'; tell me if that's not why"). When the reading adds or changes a rule in the brief, say so in that line ("this adds a rule: …"), so letting it stand is a real yes. The person sees their answer land and corrects the reason in a few words only when it's wrong. A label the person gives needs its `reason`, and this drafted, uncorrected reading is it.
 - **Ask for a reason in text only where you can't guess it:** a label that goes against the brief or against one of their earlier calls, a probe answer that adds a rule, or a costly or unacceptable severity whose why the brief's Mistakes section needs. One short question, right after that answer. At the end of a stage, one question for anything they want to add is fine.
+- **Show cases, never ids.** The person can't open the files, so every case you name to them comes with its facts (the message, and what decides it: the item, its condition, the days, what was asked), never an id alone, in a dialog or in text. When you set two cases against each other (a new call against an earlier one, a label against the person's own precedent), show them side by side, a column each, with the difference you see named, before you ask.
 - **What goes in a dialog:**
   - **The objective:** the outcome names first, since the severities name them; then each severity (one question per mistake, a right answer and a wrong one, up to 4 a call), the fallback, the target and commits. The spending cap comes when you give the cost estimate (a few amounts, with "Other").
   - **A probe or a label to settle:** the case in the question's text (the message and the facts that matter), each outcome an option in a fixed order with no recommendation.
   - **A Stop:** the question states in plain words what the stage wrote (the numbers, the choices made), without the word "Stop", and the options are the ways on, your recommendation first and marked (Recommended), plus one to change something first. When that makes more than 4, leave that one out: the dialog's "Other" covers a change.
 - **Fall back to text** when the host has no dialog, or when a question has more than 4 outcomes, and then ask one question per message.
 
-**Every way out of a stage that ends in a Stop is the person's choice**, and so is every move back: after `refine`, on to `red_team` or finish; after a red-team round, back to `refine`, another round, on to `blind_check` or finish; after `blind_check`, back to `refine` or on to `import`. Show what the stage found, recommend, and let the person choose, even when the guide names the usual next stage. A stage that ends without a Stop (`cases`, `structure`) moves on when its done-when holds.
+**Every way out of a stage that ends in a Stop is the person's choice**, and so is every move back (the refine loop's rounds are not stages: they go on without asking): after `refine`, on to `red_team` or finish; after a red-team round, back to `refine`, another round, on to `blind_check` or finish; after `blind_check`, back to `refine` or on to `import`. Show what the stage found, recommend, and let the person choose, even when the guide names the usual next stage. A stage that ends without a Stop (`cases`, `first_version`) moves on when its done-when holds.
 
 **Talk to the person in their words, not this guide's.** "Stop" is the guide's word for a point where you wait for them; never write it to them, in a dialog or in text, including in passing ("I'll bring you the Stop again"). Say what happens instead: "I'll bring you the updated objective to confirm." The same goes for the guide's other terms: say "cost so far", not "the Cost line"; describe a stage the first time you name it ("`red_team`: another model tries to break the decision"). Name a finished stage in plain words: "The objective is set.", "The brief is ready for you to check."
 
@@ -160,7 +171,7 @@ Three messages always have the same shape, so the person can compare rounds and 
 
 When the question is how a case should go or which clause wins (a policy ruling, a probe, a label to settle), leave out **Options**: ask what the person would decide (the reason as [the dialog rules](#what-the-person-sees) say: drafted by you, asked for only where you can't guess it), and give your recommendation only once they answer or ask for it. A recommendation shown first tends to be accepted, which hides what they think.
 
-**After each scored candidate in the refine loop**, report the round as a table, base beside candidate, then the candidate's loss matrix, then one line each for the verdict and the change, the decision diff, and the cost:
+**After each scored candidate in the refine loop**, report the round, then go on to the next one without asking ([When to stop](references/refine.md#when-to-stop)). Report it as a table, base beside candidate, then the candidate's loss matrix, then one line each for the verdict and the change, the decision diff, and the cost:
 
 ````markdown
 **Round 3: the round 3 candidate against v3**
@@ -183,7 +194,7 @@ When the question is how a case should go or which clause wins (a policy ruling,
 **Chart:** <report_url>
 **Excluded:** 2 (`failed_transient` 2), the same items on both sides.
 **Verdict:** kept as v4 (accepted) / kept as v4 (red-team repair) / dropped: <the report's reasons>; fixed <changes.fixed>, broke <changes.broken>
-**Changed:** <the one change> because <the report's evidence>.
+**Changed:** <each change, a line each> because <the report's evidence for it>.
 
 **How the decision changed** (v3 → round 3 candidate)
 
@@ -204,7 +215,7 @@ When the question is how a case should go or which clause wins (a policy ruling,
 
 The loss matrix is a heatmap of where the loss comes from: the loss the objective's weights put on each kind of wrong answer.
 
-**The chart link:** `loss_report` returns `report_url` when both sides are runs (`run_ids`): a page in the Moonbounce web app that draws the same report as interactive heatmaps. Print it on the **Chart** line, as it came, for every scored version (the first structure's scoring included), so a person reading in a terminal can open it; leave the line out when there is none. It opens for anyone signed in to the team that owns the runs, and expires with them, after about a day.
+**The chart link:** `loss_report` returns `report_url` when both sides are runs (`run_ids`): a page in the Moonbounce web app that draws the same report as interactive heatmaps. Print it on the **Chart** line, as it came, for every scored version (the first version's scoring included), so a person reading in a terminal can open it; leave the line out when there is none. It opens for anyone signed in to the team that owns the runs, and expires with them, after about a day.
 
 **Show one report, not two.**
 
@@ -233,6 +244,6 @@ Conventions:
 - Requests are strict; responses may add optional fields, so ignore unknown ones.
 - Control enums are closed; error reasons and model identifiers are open. Read `error.details.issues` as `{param, code, message}`, and fall back to the status and error type for a code you don't know.
 - On 403 `ORG_SUSPENDED` (`details.cause` is `unpaid` or `operator`) or `ORG_CLOSED`, stop and tell the person their team needs billing or support attention; don't retry.
-- Names: `structure` is the object, `structure_hash` and `question_hashes` its hashes, `decision_id` and `item_id` the caller's ids, `review_item_id` a review item (`inb_`). Counts are `claim_count`, claim arrays `claims`.
+- Names: the API calls a decision's definition `structure`, and `structure_hash` and `question_hashes` are its hashes; `decision_id` and `item_id` the caller's ids, `review_item_id` a review item (`inb_`). Counts are `claim_count`, claim arrays `claims`.
 - Paginated lists end with `next_cursor: null` and `has_more: false`.
 - Stored inputs read as `content: {state, attribute_values?}`, or `content: null` when not stored. `get_evaluation`'s `attribute_values` are resolved (defaults and derived values included, the derived ones named in `derived_attributes`), so don't send them back as a call's `attribute_values`; `list_cases` content holds only what the caller sent.

@@ -1,5 +1,5 @@
 ---
-description: Start or resume work on a Moonbounce decision; picks the build or the improve flow from what you ask for and what exists
+description: Start or resume work on a Moonbounce decision; picks the build or improve flow from what you ask for and what exists
 argument-hint: [decision_id] [what you want to do]
 ---
 

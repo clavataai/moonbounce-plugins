@@ -1,6 +1,6 @@
-# Design a structure
+# Design a decision
 
-How to turn a brief into questions, attributes and aggregations. The author reads this before writing a structure, and again before re-weighting or reordering one. The full reference, with every type's arithmetic and more patterns, is Moonbounce's [Aggregations](https://docs.moonbounce.ai/learn/aggregations) page.
+How to turn a brief into questions, attributes and aggregations. The author reads this before writing a decision, and again before re-weighting or reordering one. The full reference, with every type's arithmetic and more patterns, is Moonbounce's [Aggregations](https://docs.moonbounce.ai/learn/aggregations) page.
 
 ## Facts are attributes, judgment is a question
 
@@ -8,7 +8,7 @@ Read each clause of the brief and sort what it depends on:
 
 - **A fact the app already has** (an amount, a count, a number of days, a flag, a category): make it an **attribute**. Rules, `bands` and checks compare it directly (`{"name": "attributes.days_since_delivery", "gt": 30}`), with no model call: exact, free, the same every time.
 - **A judgment about content** (was the item defective? does the message say enough? is this a change of mind?): make it a **question**, one judgment each, answered by the model (P(true) for a yes/no question).
-- **Two facts compared** (the request comes from the account's usual country, the typed address is the email on file, the refund is more than the order total): a **feature comparison** between two attributes, never a table of value pairs and never a question. Where a test takes a constant (`is`, `gte`, `gt`, `lte`, `lt`), put the other feature: `{"name": "attributes.request_country", "is": {"name": "attributes.usual_country"}, "normalize": "case"}`. The model judges near misses unsteadily (one letter off reads as "the same" on one run and not the next), and a table of every pair costs most of the structure and still misses a value.
+- **Two facts compared** (the request comes from the account's usual country, the typed address is the email on file, the refund is more than the order total): a **feature comparison** between two attributes, never a table of value pairs and never a question. Where a test takes a constant (`is`, `gte`, `gt`, `lte`, `lt`), put the other feature: `{"name": "attributes.request_country", "is": {"name": "attributes.usual_country"}, "normalize": "case"}`. The model judges near misses unsteadily (one letter off reads as "the same" on one run and not the next), and a table of every pair costs most of the decision and still misses a value.
 
 Never ask a question about something the app can compute. "Was the request more than 30 days after delivery?" spends an model call to get a probability about arithmetic, and it can be wrong; `days_since_delivery` as an attribute can't be.
 
@@ -22,7 +22,7 @@ Never ask a question about something the app can compute. "Was the request more 
 - **A value of the wrong type** (a total sent as `"300"`) or out of range is a 400. A derived string attribute refuses any label outside its `enum`, so give it an `enum` only when the field's values are a closed set. Leave the `enum` out for open text (at most 200 characters; an empty value is unknown): only `is` with another feature, and `abstained`, read it.
 - **A fact the app computes** that isn't in the state (a count from another system, a lookup) has no `from`: the app sends it in `attribute_values` with each call. That changes the app's call, so ask the person before relying on one.
 
-A fact can become an attribute at any point: while writing the brief, when the author writes the structure, or in the refine loop when a question about a fact keeps getting it wrong. The brief doesn't have to have named it.
+A fact can become an attribute at any point: while writing the brief, when the author writes the decision, or in the refine loop when a question about a fact keeps getting it wrong. The brief doesn't have to have named it.
 
 **Switching an attribute the app already sends to `from`** is the one change that isn't free. A version that derives it refuses a value for it in `attribute_values`, so every live call that still sends it would be a 400. Tell the person: the app must stop sending that attribute when it starts sending the new version's hash, in the same release. In the dataset, drop it from the lines' `attribute_values` (`jq -c 'del(.attribute_values.<name>) | if .attribute_values == {} then del(.attribute_values) else . end' moonbounce/<decision_id>.examples.jsonl > moonbounce/scratch/<decision_id>/examples.jsonl`, then `cp` it back: never redirect onto the file jq reads), and score the old version on its own copy that keeps it.
 
@@ -36,7 +36,7 @@ A fact can become an attribute at any point: while writing the brief, when the a
 
 The test is unknown when either side is: a missing value, an empty open string, or one the normalization leaves blank. Give the typed value a `default` of `""` and catch it with a first rule on `{"name": "aggregations.<check>", "abstained": true}` that names the safe outcome. Anything beyond the named normalizations (a domain-only match, edit distance) stays in the app's code, which sends its result as an attribute.
 
-**Keep a question when** the fact is only in free text (a tracking line in prose, a date the customer wrote), or when the app would have to judge it to compute it. A value to compare that is only in the message text (an address the customer typed) can't come from a question, which never returns text: ask the person whether the app can put the raw value in the state (`state.requester.typed_email`), derived with `from` and compared in the structure. Ask for the raw field, never a derived boolean such as `requester_is_email_on_file`: that moves the comparison into the app's code, outside the hash, where the refine loop can't see or test it.
+**Keep a question when** the fact is only in free text (a tracking line in prose, a date the customer wrote), or when the app would have to judge it to compute it. A value to compare that is only in the message text (an address the customer typed) can't come from a question, which never returns text: ask the person whether the app can put the raw value in the state (`state.requester.typed_email`), derived with `from` and compared in the decision. Ask for the raw field, never a derived boolean such as `requester_is_email_on_file`: that moves the comparison into the app's code, outside the hash, where the refine loop can't see or test it.
 
 ## Questions
 
@@ -149,4 +149,4 @@ The refund policy's facts (days since delivery, refunds in the last year, the or
 
 Read top down: an unclear message, or one the model couldn't answer about, escalates; our failure with a reason for caution escalates; our failure otherwise grants; a change of mind past 30 days denies; anything left escalates. Only two model questions run per request, and every number in the policy is an exact comparison. The brief's clause map in `work/notes.md` says which rule applies which clause. The policy's clause about a late delivery counting from the promised date is one the app can compute (days since the promised date) and send as `days_since_delivery`; if it can't, a question reading `state.order` (and so the tracking line, when there is one) judges it instead.
 
-When `near_cuts` and `sweep_cut` apply to a structure like this, they apply to `bands`; a `rules` structure is tuned by its thresholds and the order of its rules, one change per candidate.
+When `near_cuts` and `sweep_cut` apply to a decision like this, they apply to `bands`; a decision whose result is `rules` is tuned by its thresholds and the order of its rules.
