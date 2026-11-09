@@ -8,17 +8,18 @@ Read each clause of the brief and sort what it depends on:
 
 - **A fact the app already has** (an amount, a count, a number of days, a flag, a category): make it an **attribute**. Rules, `bands` and checks compare it directly (`{"name": "attributes.days_since_delivery", "gt": 30}`), with no model call: exact, free, the same every time.
 - **A judgment about content** (was the item defective? does the message say enough? is this a change of mind?): make it a **question**, one judgment each, answered by the model (P(true) for a yes/no question).
+- **Two facts compared** (the request comes from the account's usual country, the typed address is the email on file, the refund is more than the order total): a **feature comparison** between two attributes, never a table of value pairs and never a question. Where a test takes a constant (`is`, `gte`, `gt`, `lte`, `lt`), put the other feature: `{"name": "attributes.request_country", "is": {"name": "attributes.usual_country"}, "normalize": "case"}`. The model judges near misses unsteadily (one letter off reads as "the same" on one run and not the next), and a table of every pair costs most of the structure and still misses a value.
 
 Never ask a question about something the app can compute. "Was the request more than 30 days after delivery?" spends an model call to get a probability about arithmetic, and it can be wrong; `days_since_delivery` as an attribute can't be.
 
-**How.** Declare the attribute with its type and range (`{"type": "number", "minimum": 0}`, a `boolean`, or a `string` with its `enum`) and, for a fact already in the state, `from`: its state path, as in `reads`. Evaluate fills it from each call's `state`, validated by the declaration with no coercion, so the app's call doesn't change and the dataset's lines need nothing added:
+**How.** Declare the attribute with its type and range (`{"type": "number", "minimum": 0}`, a `boolean`, a `string` with its `enum`, or a `string` without one for open text such as an address or a name) and, for a fact already in the state, `from`: its state path, as in `reads`. Evaluate fills it from each call's `state`, validated by the declaration with no coercion, so the app's call doesn't change and the dataset's lines need nothing added:
 
 ```json
 "order_total_usd": { "type": "number", "minimum": 0, "from": "state.order.order_total_usd" }
 ```
 
 - **A missing or null field** takes the attribute's `default`; without one the call is a 400 naming the path. Give a default when the field can be absent (and when older traffic may lack it, since replay recomputes it from each stored case's state).
-- **A value of the wrong type** (a total sent as `"300"`) or out of range is a 400. A derived string attribute refuses any label outside its `enum`, so derive one only from a field whose values are a closed set.
+- **A value of the wrong type** (a total sent as `"300"`) or out of range is a 400. A derived string attribute refuses any label outside its `enum`, so give it an `enum` only when the field's values are a closed set. Leave the `enum` out for open text (at most 200 characters; an empty value is unknown): only `is` with another feature, and `abstained`, read it.
 - **A fact the app computes** that isn't in the state (a count from another system, a lookup) has no `from`: the app sends it in `attribute_values` with each call. That changes the app's call, so ask the person before relying on one.
 
 A fact can become an attribute at any point: while writing the brief, when the author writes the structure, or in the refine loop when a question about a fact keeps getting it wrong. The brief doesn't have to have named it.
@@ -27,7 +28,15 @@ A fact can become an attribute at any point: while writing the brief, when the a
 
 **Keep facts out of questions.** A question sees only the state paths in its `reads`, so leave out every field that is an attribute: a model that also sees the numbers may weigh them its own way, against the exact comparisons in your rules. A path a question reads must be present on every call, so an optional field is read through its parent, and the question then sees the parent's other fields too. When an optional text field shares a parent with facts (a tracking line inside `order`, beside the totals), ask whether the app can send the text under a key of its own (`state.delivery`, always present, holding an optional `tracking`), so the question reads just that.
 
-**Keep a question when** the fact is only in free text (a tracking line in prose, a date the customer wrote), or when the app would have to judge it to compute it.
+**Comparing two facts.** Make both attributes and compare them in a rule's condition, or in a check whose one input is the comparison (`{"type": "all", "inputs": [<the test>]}`, 1 when it holds, 0 when not), which feeds any aggregation as a number. Pick the normalization per comparison:
+
+- **None** (exact) for codes and ids the app already writes one way.
+- **`case`** trims and lower-cases both sides, for country codes or names that may differ in case.
+- **`email`** is `case`, then drops a `+tag` and Gmail's dots, so `Rob.Tanaka+help@gmail.com` is `robtanaka@gmail.com`; `rob.tanakaa@corp.com` still differs from `rob.tanaka@corp.com`. It widens "the same" on every domain (`rob+x@corp.com` is `rob@corp.com`), so use `case` where a `+tag` may be a different mailbox.
+
+The test is unknown when either side is: a missing value, an empty open string, or one the normalization leaves blank. Give the typed value a `default` of `""` and catch it with a first rule on `{"name": "aggregations.<check>", "abstained": true}` that names the safe outcome. Anything beyond the named normalizations (a domain-only match, edit distance) stays in the app's code, which sends its result as an attribute.
+
+**Keep a question when** the fact is only in free text (a tracking line in prose, a date the customer wrote), or when the app would have to judge it to compute it. A value to compare that is only in the message text (an address the customer typed) can't come from a question, which never returns text: ask the person whether the app can put the raw value in the state (`state.requester.typed_email`), derived with `from` and compared in the structure. Ask for the raw field, never a derived boolean such as `requester_is_email_on_file`: that moves the comparison into the app's code, outside the hash, where the refine loop can't see or test it.
 
 ## Questions
 
@@ -73,7 +82,8 @@ A fact can become an attribute at any point: while writing the brief, when the a
 | Any one of several reasons is enough | `noisy_or` when the reasons are independent, `max` when they overlap. An average would dilute a single strong reason. |
 | All of several must hold | `product` when independent, `min` when they overlap. |
 | One thing vetoes the rest | `min` over the value and the inverted veto. |
-| Several yes/no thresholds | `all` or `any` (each input with `gte`, `gt`, `lte` or `lt`; default ≥ 0.5). They output 1 or 0, so they nest anywhere. |
+| Several yes/no tests | `all` or `any` (each input takes a rule condition's test: `gte`, `gt`, `lte` or `lt`, default ≥ 0.5, `is` or `in`, `abstained`, or a comparison with another feature). They output 1 or 0, so they nest anywhere. |
+| Two facts the same, or one above the other | A feature comparison, `{"name": <a>, "is": {"name": <b>}}` (with `normalize` `case` or `email`) or `gt: {"name": <b>}`, in a rule or a one-input `all`. Never a table of value pairs or a question. |
 | A label straight to an outcome | `match` on a choice question, a string attribute or another outcome. |
 | An unsure choice or score goes to a person | A first rule on the question's `confidence` (`lt`), naming the safe outcome. A `noul` has no `confidence`. |
 | Weights fitted on labeled data | `logistic` (signed weights and a `bias`). Never guess its numbers: a guessed logistic looks more precise than it is, and fitting isn't offered yet. |
