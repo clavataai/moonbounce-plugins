@@ -45,7 +45,19 @@ Sign in from Cursor's MCP settings (Customize → MCP) when the server needs log
 
 Copy `decisions/` to `.agents/skills/` or `.cursor/skills/` (project), or `~/.agents/skills/` or `~/.cursor/skills/` (personal). Invoke `/decisions` or let Cursor select it automatically ([Cursor skills](https://cursor.com/docs/skills)). Alternatively use the installer below.
 
-## Codex CLI
+## Codex app and CLI
+
+Install the plugin using a CLI with `codex plugin` support ([Codex plugins](https://developers.openai.com/plugins/build/plugins)):
+
+```sh
+codex plugin marketplace add https://github.com/clavataai/moonbounce-plugins.git
+codex plugin add moonbounce@moonbounce
+codex mcp login moonbounce
+```
+
+This bundles the MCP connection and the shared `decisions` skill. Invoke `$moonbounce:decisions` or select it through the skill picker. Describe whether to build, improve, assess or resume; the same conversational intake handles each. A decision ID is optional when the agent can locate it with `list_decisions`. Restart a running Codex app if the new plugin or connection is absent. Do not also install the standalone skill in the same host.
+
+### Without the plugin
 
 Add the HTTP server, then sign in ([Codex MCP](https://developers.openai.com/codex/mcp)):
 
@@ -58,7 +70,7 @@ Copy `decisions/` to `.agents/skills/` (project) or `~/.agents/skills/` (persona
 
 ## Any agent: install or copy the skill
 
-Claude Code plugin users should not also install the skill with the CLI: that adds `/decisions` beside `/moonbounce:decisions`.
+Plugin users should not also install a standalone copy in the same host; that duplicates the entry point.
 
 With Node.js 22.20 or later, use the [skills installer](https://github.com/vercel-labs/skills), which supports many agents:
 

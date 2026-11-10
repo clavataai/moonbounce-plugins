@@ -1,0 +1,14 @@
+{
+  "name": "moonbounce",
+  "description": "Build and improve Moonbounce decisions with hosted guidance.",
+  "author": { "name": "Moonbounce" },
+  "license": "MIT",
+  "repository": "https://github.com/clavataai/moonbounce-plugins",
+  "homepage": "https://github.com/clavataai/moonbounce-plugins",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Moonbounce",
+    "shortDescription": "Build and improve decisions with hosted guidance"
+  }
+}
