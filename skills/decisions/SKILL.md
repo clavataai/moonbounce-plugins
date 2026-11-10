@@ -1,6 +1,6 @@
 ---
 name: decisions
-description: "Use when calling the Moonbounce Decisions MCP or API: build a decision from a policy, labeled data or a description (the build flow, with a quick mode that gets a first measured version running in about 25 minutes to improve on real traffic), or improve one in use (the improve flow), resuming where the brief says; define/register/evaluate a decision, read back or list decisions, versions, evaluations and labeled cases, import labeled examples or send feedback, score a dataset, backtest, set the objective, pick a model, check cost."
+description: "Use when calling the Moonbounce Decisions MCP or API: create, revise, assess or investigate a decision through conversational intake and a stored advisory plan; resume using verified evidence and remaining budgets; define/register/evaluate, import labeled examples, send feedback, backtest, set objectives, select models and check cost."
 ---
 
 # Moonbounce Decisions
@@ -9,7 +9,7 @@ A decision is a JSON object: `questions` a model answers over the call's `state`
 
 ## The smallest call
 
-Two calls that store nothing show the connection works. Use the tools, or REST with `Authorization: Bearer <key>`:
+For build, revision, assessment or investigation, start with discovery and conversational intake below; planning needs no paid smoke evaluation. When the user requests a connection test and authorizes its model spend, these two calls demonstrate it without storing evaluation content. Use the tools, or REST with `Authorization: Bearer <key>`:
 
 1. `whoami` (`GET /v1/whoami`) returns the org, environment and scopes behind the key or sign-in. It reads nothing and spends nothing.
 2. A dry-run `evaluate` (`POST /v1/evaluate`) registers and stores nothing, spends one model call, and answers with `status`, `answers`, the `version` that ran (`number` is `null` while that version isn't registered yet; a dry run registers nothing) and `cost`:
@@ -23,14 +23,14 @@ Two calls that store nothing show the connection works. Use the tools, or REST w
 }
 ```
 
-Everything else here builds on that call: the decision grows aggregations and cut points, and dropping `dry_run` stores the evaluation. Then run the discovery routine below.
+That example demonstrates evaluation; it is not a required first step. Selected work may add aggregations and cut points, and dropping `dry_run` stores an evaluation. Use the discovery routine below to identify the tools needed for the actual request.
 
 ## Discovery routine — first, every session
 
 1. Use the connected `moonbounce` MCP server (with the Claude Code plugin it appears as `plugin:moonbounce:moonbounce`). If it's listed but its tools aren't available because it needs sign-in, you can't start sign-in yourself: ask the person to run `/mcp` → the server → **Authenticate** (or `claude mcp login <name>` in a shell, for a server they added by hand), then continue. If none, connect your agent to `https://api.moonbounce.ai/mcp` by sign-in or key; see [per-agent installation](references/install.md). Sign-in gives admins and members `decisions:develop` and `decisions:evaluate` in Production, including real and dry-run evaluations and reads, attributed to the person. Unattended agents, backends, Test (`env:test`) and REST need an API key with `decisions:develop`/`decisions:evaluate` as needed; send it as `Authorization: Bearer <key>`. Never print the key. Disable any signed-in server when using a key-based connection. JSON-RPC `tools/list` returns every tool with its full JSON schema inline. If MCP is unavailable, use REST and read `https://api.moonbounce.ai/openapi.json`. Done when the tool catalog or OpenAPI document is available.
 2. List tools and read names **and descriptions**. Find tools by the task descriptions below and read each tool's `inputSchema` before first use; descriptions carry status codes and gotchas. Done when the current tool and schema for each task below are identified.
 3. Call the tool described as listing the models this deployment offers; it has no side effects. Done when you can name the offered models and their capabilities.
-4. Check the key's environment with `whoami`, which returns the key's org, environment, key id, actor and scopes and spends nothing. Every list page, and every response about per-environment data (evaluations, feedback, cases, previews, suggestions, the model setting and the objective), also carries `environment`; decisions and versions belong to the whole organization, so a decision or version object doesn't. A key is permanently bound to one environment: production, or test with `env:test`. Test traffic never counts as production; its data, previews and model settings are separate. Signing in to production is the normal way for a person to build or improve a decision: scoring uses dry runs, and before `import` the build flow writes only the decision, its description, its model setting and its objective, so don't tell a signed-in person to switch to a test key. A test key, with a fresh decision id such as `skill.<topic>`, is for a separate sandbox: trying the API, or a backend or unattended agent under test. Done when you can state the environment from a response, the offered engines, and the current tools for every task below.
+4. Check the key's environment with `whoami`, which returns the key's org, environment, key id, actor and scopes and spends nothing. Every list page, and every response about per-environment data (evaluations, feedback, cases, previews, suggestions, the model setting and the objective), also carries `environment`; decisions and versions belong to the whole organization, so a decision or version object doesn't. A key is permanently bound to one environment: production, or test with `env:test`. Test traffic never counts as production; its data, previews and model settings are separate. Signing in to production is the normal way for a person to work on a decision; scoring uses dry runs. Registration, description/model/objective writes and import are separate effects selected only when the request calls for them. Assessment preserves the candidate and settings. Do not tell a signed-in person to switch to a test key merely to plan or score. A test key, with a fresh decision id such as `skill.<topic>`, is for a separate sandbox: trying the API, or a backend or unattended agent under test. Done when you can state the environment from a response, the offered engines, and the current tools for every task below.
 
 ## Tasks
 
@@ -38,12 +38,12 @@ List tools, find the description matching the task, and read its `inputSchema` f
 
 | Task | What to look for in a tool description | Read when doing this task |
 | --- | --- | --- |
-| Build a decision, with or without a written policy | No single tool: the build flow, below. | [The build flow](references/build.md) |
-| Get a decision running quickly, to improve on real traffic | No single tool: the build flow in quick mode, below. | [Quick mode](references/build.md#quick-mode) |
-| Improve a decision in use | No single tool: the improve flow, below. | [The improve flow](references/improve.md) |
+| Build a decision, with or without a written policy | Conversational intake selects the needed authoring, evidence and measurement procedures. | [Intake and plans](references/intake.md) |
+| Get a quick, scored first version | Request a measured endpoint and stopping point; scoring is not an untested draft. | [Requested scope and stopping point](references/build.md#requested-scope-and-stopping-point) |
+| Revise, assess or investigate a decision in use | Conversational intake establishes the requested effects before selecting procedures. | [Intake and plans](references/intake.md) |
 | Design a decision | No tool: which facts are attributes, which judgments are questions, which aggregation fits the policy. | [Design a decision](references/design.md) |
 | Define a decision | Write JSON in the caller's repo; its upload validates it and answers its hash. | [Define a decision](references/tasks.md#define-a-decision) |
-| Upload a file | `create_upload`: a URL that takes a dataset file or a decision file once, by `curl`; later calls name it by `upload_id` or `structure_hash`. | [Upload a file](references/tasks.md#upload-a-file) |
+| Upload a file | `create_upload`: a URL that takes a dataset, decision or intake file once, by `curl`; later calls name it by `upload_id` or `structure_hash`. | [Upload a file](references/tasks.md#upload-a-file) |
 | Register it | “Register a decision's version” (“registers its structure as the decision's next version”). | [Register it](references/tasks.md#register-it) |
 | Read back or list | “Reads only” descriptions for decisions, their versions and past evaluations. | [Read back or list](references/tasks.md#read-back-or-list) |
 | Try without storing | Evaluate with `moonbounce.dry_run: true`: spends model calls, stores only usage. | [Dry run](references/tasks.md#dry-run) |
@@ -69,41 +69,35 @@ Review-queue tools serve human reviewers; agents rarely need them. These files s
 4. Feedback claims name a question (`expected_answer`) or an outcome the result can produce (`expected_outcome`), or approve/reject the returned outcome (`verdict`, never with `expected_outcome`), or flag broken content (`input_broken`); any other kind is a 400. Previews need a result that decides outcomes (`bands`, `rules` or `match`); a value result is 400 `OUTCOMES_INVALID`. For imported examples, address feedback by the example's evaluation `id` (`about.evaluation_id`); feedback by `item_id` binds to primary traffic only.
 5. Send an `idempotency-key` argument on writes except `fill_review_queue`, which takes none. A single-item dry run accepts one and ignores it, so a retried dry run runs, and is billed, again. A run (`create_run`) takes one. Reuse a key only to retry the same request.
 
-## Flows
+## Conversational planning
 
-A person's agent does two things with Moonbounce:
+Every build, revision, assessment and investigation starts with [Conversational intake and advisory plans](references/intake.md). Read `get_decision_intake`, establish the requested operation from the conversation, triage materials, upload the local intake and call `create_decision_plan` to obtain a stored advisory plan. If required tools or the matching adapter are unavailable, report that requirement; do not run another workflow instead.
 
-- **The build flow makes a new decision,** from a policy, labeled data or only a description, and measures it before it ships. The brief is what the first version comes from, and it is the policy from then on. Its [quick mode](references/build.md#quick-mode) runs the same stages with less in each: a first measured version in about 25 minutes, then a pause to wire it in and improve it on real traffic. The build asks which at its start.
-- **The improve flow improves a decision in use.** It already runs in the app, and real feedback is the main signal.
+The selected plan controls procedures, depth, order and resource limits. Its adapter separates authoring from registration, settings and scoring. Assessment preserves the candidate and settings. Users specify the endpoint, allowed effects and stopping point, select any stage or revise the intake; no stage locks are enforced. A quick, scored first version is a supported request: obtain actual measurement, perform authorized registration/objective setup when needed for the selected score or use, verify the report's actual objective, report limitations and stop where requested. Do not infer draft-only work from speed or offer a Quick/Full mode choice. Resume from the stored plan, current artifacts and verified evidence receipts, preserving remaining allowances.
 
-Each is a list of named stages. Each stage says when it is done, and some stop for the person. Both end in the same [refine loop](references/refine.md), judged by the decision's objective, and use a team of fresh subagents, so no agent grades its own work.
+## Procedure references
 
-When the person wants a decision built, started or improved, by a command (`/moonbounce:start`, `/moonbounce:build` or `/moonbounce:improve` in Claude Code), a prompt or in words, work out the flow and the stage first. Say which you picked and why, then read that flow's guide and follow it from that stage:
-
-1. **The person named a flow**: `/moonbounce:build` or `/moonbounce:improve` in Claude Code, the `build_decision` or `improve_decision` MCP prompt, or in words. Run that flow, resuming at the brief's `stage` when the brief records the same flow (a build paused in quick mode: [ask first](references/build.md#quick-mode)). When the build flow is named and the brief records the build flow at `done`, or the improve flow at any stage, ask before starting over: the build flow rewrites the brief. Suggest the improve flow instead. When the improve flow is named and the brief records the build flow unfinished, ask before replacing it; a finished build is where the improve flow starts, at `brief_check`, keeping the brief, and so is a build paused in quick mode, once its dataset is stored if it has no stored cases. An improve flow at `done` starts again at `brief_check`: improving a shipped decision is a new round.
-2. **No flow named, and the brief's `stage` isn't `done`:** resume that flow at that stage. A build paused in quick mode (`mode: quick` at `stage: red_team`) is a usable decision, not one in progress: [ask first](references/build.md#quick-mode).
-3. **No flow named, and the decision is in use in the key's environment:** it has labeled cases (`list_cases` `total` above 0) or live traffic (`list_evaluations` with `assignment_mode: primary` and `limit: 1` returns one). The improve flow, at `brief_check`.
-4. **Otherwise:** the build flow, at `objective`. A decision file already in the repo is the author's first draft.
+The build and improve guides below are libraries of stage procedures. Read only the part selected by the plan and adapter; their whole-flow transitions do not select work. A brief's stage records context, not authority to bypass intake or evidence verification.
 
 | Flow | Guide | Stages |
 | --- | --- | --- |
 | Build | [build.md](references/build.md) | `objective`, `brief`, `cases`, `first_version`, `refine`, `red_team`, `blind_check`, `import` |
 | Improve | [improve.md](references/improve.md) | `brief_check`, `baseline`, `cases`, `refine`, `red_team`, `ship` |
 
-**Read only the guide of the flow you are running.** Each guide links the shared files below at the step that needs them, saying when; open one only when you reach that step, never ahead of it:
+**Read only the procedure selected by the plan.** Each guide links the shared files below at the step that needs them, saying when; open one only when you reach that step, never ahead of it:
 
 | Shared file | What it has | Read when |
 | --- | --- | --- |
 | [refine.md](references/refine.md) | The refine loop: scoring, label checks, keeping a change | Your flow reaches `refine` (build, improve), or `cases` takes a conflict to the person (its Check before you fit, step 4) |
 | [files.md](references/files.md) | The decision file, the brief, dataset lines, `rulings.jsonl`, `runs.json` | You write one of them for the first time in a flow |
 | [cases.md](references/cases.md) | Writing cases: hard cases first, the person's data, case writers, duplicates | Build or improve at `cases` |
-| [author.md](references/author.md) | The first version: the author, registering, the model and objective | Build at `cases` (the author starts alongside the case writers) |
+| [author.md](references/author.md) | The first version: the author, registering, the model and objective | Selected authoring; registration/settings/scoring are separate effects |
 | [red-team.md](references/red-team.md) | Who writes a red-team round, splitting it across writers, settling its labels, keeping it | Build or improve at `red_team` |
-| [import.md](references/import.md) | Storing a dataset, resuming an import | Build at `import`, or the improve flow after a paused quick build |
+| [import.md](references/import.md) | Storing a dataset, resuming an import | Selected import work; resumption does not require an import |
 
 ### Where a flow stands
 
-A flow's progress lives in the repo, in the brief's front matter, so a flow resumes from the repo alone. The server keeps nothing about it. The brief is `moonbounce/<decision_id>.brief.md`, beside the decision file `moonbounce/<decision_id>.json`. The build flow's first stage creates it, and the improve flow's first stage drafts one when there is none.
+Plans and intake snapshots are stored remotely. Local brief front matter and evidence receipts record execution context; verify them against the selected plan before resuming. The brief is `moonbounce/<decision_id>.brief.md`, beside the decision file `moonbounce/<decision_id>.json`. Selected brief work creates or verifies it when needed; its front matter does not choose the next work.
 
 ```yaml
 ---
@@ -114,18 +108,17 @@ structure_hash: null   # the version the brief was last checked against
 date: 2026-11-06       # when stage or structure_hash last changed
 commits: none          # the person's choice: none, or the branch to commit on after each stage and kept version
 frozen: null           # build flow only: a sha256 of the brief's text below the front matter, when the blind set was written
-mode: full             # build flow only: quick (a first measured version, then a pause), hardening (topping up a quick build) or full; absent means full
 report: null           # chart or text: how the person sees round reports, once known
 ---
 ```
 
-Update `stage` and `date` when a stage is done. Going back a stage is allowed: each guide says which stages to re-run after it.
+Update execution context after a selected procedure, and replan when facts or artifact fingerprints change. Reuse verified evidence instead of repeating every later stage.
 
 **Committing is the person's call.** When a flow starts, ask once whether they want you to commit as you go (after each stage and each kept version) or to leave committing to them, and if you are to commit, on which branch: suggest `moonbounce/<decision_id>`, and use the one they name. Record it as `commits: <branch>` or `commits: none`. With a branch, create it from the current one at the first commit (or switch to it when it exists), commit only there, and never push. Commit only this decision's files, as below, never other decisions' files or the person's other changes, and ask before switching branches when they have uncommitted changes outside `moonbounce/`. Without an answer, it is `none`: write the files and leave git alone, branches included. Every file the flow writes stays in the repo either way, so a flow resumes from the files alone.
 
 **How to commit.** A decision's files are `moonbounce/<decision_id>.json`, `.brief.md`, `.examples.jsonl`, `.blind.jsonl` and `.synthetic.jsonl`, and the folder `moonbounce/work/<decision_id>/`. Name each by its full path, never by a wildcard: `moonbounce/<decision_id>.*` also takes another decision whose id starts with this one and a dot (`refund.*` takes `refund.v2.json`).
 
-1. List what changed: `git status --short --ignored --untracked-files=all --no-renames --no-branch -- moonbounce/<decision_id>.json moonbounce/<decision_id>.brief.md moonbounce/<decision_id>.examples.jsonl moonbounce/<decision_id>.blind.jsonl moonbounce/<decision_id>.synthetic.jsonl moonbounce/work/<decision_id>/`. It takes paths that don't exist yet, and prints a two-letter status and a path for each changed, new or ignored file, one file a line, so a commit never names a folder (a folder would also take files in it the person stopped tracking). Its options keep the person's git settings from hiding new files, joining a rename into one line or adding a branch line. Each path starts with `moonbounce/`; when git prints folders before it (a setting that shows paths from the repo's root), drop them. When it prints nothing, or only `!!` lines, there is nothing to commit.
+1. List what changed: `git status --short --ignored --untracked-files=all --no-renames --no-branch -- moonbounce/<decision_id>.json moonbounce/<decision_id>.brief.md moonbounce/<decision_id>.examples.jsonl moonbounce/<decision_id>.blind.jsonl moonbounce/<decision_id>.synthetic.jsonl moonbounce/<decision_id>.intake.json moonbounce/work/<decision_id>/`. It takes paths that don't exist yet, and prints a two-letter status and a path for each changed, new or ignored file, one file a line, so a commit never names a folder (a folder would also take files in it the person stopped tracking). Its options keep the person's git settings from hiding new files, joining a rename into one line or adding a branch line. Each path starts with `moonbounce/`; when git prints folders before it (a setting that shows paths from the repo's root), drop them. When it prints nothing, or only `!!` lines, there is nothing to commit.
 2. `git add` only the paths marked `??` (new files). The commit takes the rest, deletions included, where `git add` refuses a deletion that is already staged.
 3. Write the commit message, fresh for each commit, to `moonbounce/scratch/<decision_id>/commit-msg.txt` with your file tool (it carries the brief's words, which never go in a command), and run `git commit -F moonbounce/scratch/<decision_id>/commit-msg.txt -- <every path the list printed, except the ones !! covers>`. Naming the paths keeps out anything else that is staged. When no path is left, there is nothing to commit: never run `git commit` with no path after `--`, which would commit whatever else is staged.
 
@@ -150,11 +143,11 @@ Three messages always have the same shape, so the person can compare rounds and 
   - **A Stop:** the question states in plain words what the stage wrote (the numbers, the choices made), without the word "Stop", and the options are the ways on, your recommendation first and marked (Recommended), plus one to change something first. When that makes more than 4, leave that one out: the dialog's "Other" covers a change.
 - **Fall back to text** when the host has no dialog, or when a question has more than 4 outcomes, and then ask one question per message.
 
-**Every way out of a stage that ends in a Stop is the person's choice**, and so is every move back (the refine loop's rounds are not stages: they go on without asking): after `refine`, on to `red_team` or finish; after a red-team round, back to `refine`, another round, on to `blind_check` or finish; after `blind_check`, back to `refine` or on to `import`. Show what the stage found, recommend, and let the person choose, even when the guide names the usual next stage. A stage that ends without a Stop (`cases`, `first_version`) moves on when its done-when holds.
+**Honor the requested endpoint and stopping point.** Reuse choices already made in the conversation; ask only for a consequential unresolved decision or authorization. Report selected work and any deferred evidence goals. Stage completion does not authorize starting the next table row, more refinement, import or integration. Continue only within the current request and remaining allowances; a user may select any needed procedure or stop without a prescribed exit menu.
 
 **Talk to the person in their words, not this guide's.** "Stop" is the guide's word for a point where you wait for them; never write it to them, in a dialog or in text, including in passing ("I'll bring you the Stop again"). Say what happens instead: "I'll bring you the updated objective to confirm." The same goes for the guide's other terms: say "cost so far", not "the Cost line"; describe a stage the first time you name it ("`red_team`: another model tries to break the decision"). Name a finished stage in plain words: "The objective is set.", "The brief is ready for you to check."
 
-**Before any step that takes more than a minute, say what is starting, why, about how long it takes and what you'll bring back,** in one or two plain sentences. Agents working out of sight are the part of a flow people find most confusing. For example: "Next, separate agents write test cases from your policy while another drafts the decision, so it's tested on cases its author never shaped. This takes about ten minutes, and then I'll score the draft and show you how it did." Typical times in a full build: writing the cases, 5 to 13 minutes, with the first draft of the decision running beside them and taking up to 12; one round of trying to break it, 5 to 12; storing the dataset, about 5. A quick build or a smaller dataset takes less, so scale these to the job. Say which part you're waiting on if the person asks, and when a step runs much longer than you said, tell them.
+**Before any step that takes more than a minute, say what is starting, why, about how long it takes and what you'll bring back,** in one or two plain sentences. Agents working out of sight are the part of a flow people find most confusing. For example: "Next, separate agents write test cases from your policy while another drafts the decision, so it's tested on cases its author never shaped. This takes about ten minutes, and then I'll score the draft and show you how it did." Example estimates for these procedures: writing the cases, 5 to 13 minutes, with the first draft of the decision running beside them and taking up to 12; one round of trying to break it, 5 to 12; storing the dataset, about 5. Scale estimates to the selected scope, available evidence and dataset; do not promise a fixed completion time. Say which part you're waiting on if the person asks, and when a step runs much longer than you said, tell them.
 
 **At a Stop**, use these three parts, in this order:
 
@@ -174,7 +167,7 @@ Three messages always have the same shape, so the person can compare rounds and 
 
 When the question is how a case should go or which clause wins (a policy ruling, a probe, a label to settle), leave out **Options**: ask what the person would decide (the reason as [the dialog rules](#what-the-person-sees) say: drafted by you, asked for only where you can't guess it), and give your recommendation only once they answer or ask for it. A recommendation shown first tends to be accepted, which hides what they think.
 
-**After each scored candidate in the refine loop**, report the round, then go on to the next one without asking ([When to stop](references/refine.md#when-to-stop)). Report it as a table, base beside candidate, then the candidate's loss matrix, then one line each for the verdict and the change, the decision diff, and the cost:
+**After each scored candidate in the refine loop**, report the round, then continue only under the user's continuation instructions and remaining allowances ([When to stop](references/refine.md#when-to-stop)). Report it as a table, base beside candidate, then the candidate's loss matrix, then one line each for the verdict and the change, the decision diff, and the cost:
 
 ````markdown
 **Round 3: the round 3 candidate against v3**

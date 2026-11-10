@@ -20,7 +20,9 @@ claude plugin install moonbounce --marketplace clavataai/moonbounce-plugins
 
 That needs Claude Code 2.1.292 or later; on an older version, run `claude plugin marketplace add clavataai/moonbounce-plugins`, then `claude plugin install moonbounce@moonbounce`.
 
-Then sign in: run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** (Claude Code also shows a notice at startup when it's needed; your agent can't start sign-in for you). Invoke the skill with `/moonbounce:decisions`; the plugin already installs it. Start with `/moonbounce:start <decision_id>`: it builds a decision (from a policy, labeled data or a description) or improves one from its feedback, whichever you ask for or the repo calls for. `/moonbounce:build <decision_id>` and `/moonbounce:improve <decision_id>` name the flow directly. Either resumes where `moonbounce/<decision_id>.brief.md` says it stopped. MCP clients without the plugin have the same two flows as the prompts `build_decision` and `improve_decision`.
+Then sign in: run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** (Claude Code also shows a notice at startup when it's needed; your agent can't start sign-in for you). Invoke the skill with `/moonbounce:decisions`; the plugin already installs it. Start with `/moonbounce:start <decision_id>` and describe the outcome you want: creation, revision, assessment or investigation. `/moonbounce:build <decision_id>` and `/moonbounce:improve <decision_id>` enter the same conversational intake. The agent reuses the conversation and materials, proposes the needed work and follows the requested scope and stopping point. Resume using the stored plan and verified evidence, not a mode flag. Other MCP clients can use `build_decision` and `improve_decision` with the matching local intake adapter installed.
+
+For example: `/moonbounce:start refund-exception Build and register a quick, scored first version, then stop. No tuning or app changes yet.` This asks for a usable measured result, not an untested draft or a fixed Quick preset. The agent reports what was tested, the score, cost and remaining limitations; further work follows the user's request.
 
 ### Cursor
 

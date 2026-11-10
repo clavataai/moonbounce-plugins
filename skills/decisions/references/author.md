@@ -1,6 +1,8 @@
 # The first version
 
-How the build flow gets from a brief to a registered first version: a fresh author writes the decision, you register it, set its model and store the objective. Your flow's guide says what comes after.
+Use this guide as a procedure library under the intake plan and [adapter](intake.md). The `first_version` stage selects drafting and validation under **The author** only; registration, settings and scoring are separate authorized work.
+
+A fresh author drafts a local decision from the brief and validates it. Use the registration section only as a separately selected, authorized step for a measured create/revise operation.
 
 ## The author
 
@@ -10,6 +12,8 @@ An attribute derived from the state needs nothing from the person or the dataset
 
 ## Register it
 
+Under an intake plan, assess and draft-only work registers nothing and changes no model, objective or description settings. Missing registration or a different stored objective during assessment is a conflict to report. Drafting completion means a valid local candidate with its clause map; registration is not part of that completion check.
+
 Register it in the environment the decision will run in, usually Production (the key's, as `whoami` says): `register_decision` with `{decision_id, structure_hash}`, the hash the author's upload answered, while the upload lives (upload the file again once it has expired). Every later run names that hash.
 
 The first registration stores the deployment's default model as the environment's model setting, at revision 1. Then, in order:
@@ -18,4 +22,4 @@ The first registration stores the deployment's default model as the environment'
 2. **The objective** (`set_objective`), and check that `unknown_outcomes` is empty.
 3. **The description**: the brief's Description sentence, as the person confirmed it ([Describe the decision](tasks.md#describe-the-decision)). A brief written without one gets one first, confirmed with the person. When `get_decision` shows a different sentence, show the person both before replacing it.
 
-Put the version's hash in the brief's front matter. Done when it validates, is registered, and every clause maps to a question or rule.
+Put the version's hash in the brief's front matter. The registration step is done when it validates, is registered, and every clause maps to a question or rule.

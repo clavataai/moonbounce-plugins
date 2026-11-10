@@ -1,8 +1,10 @@
 # A decision's files
 
-The files every flow keeps in the caller's repo, so a flow resumes from the repo alone. Each flow's guide says which of them it writes. `work/` is `moonbounce/work/<decision_id>/`.
+Artifacts used by selected procedures in the caller's repo. The current request and plan determine which files are needed; a task does not create every file below. Plans and submitted intake snapshots persist remotely, while local artifacts and receipts supply execution evidence for resumption. `work/` is `moonbounce/work/<decision_id>/`.
 
-- **The decision file**, `moonbounce/<decision_id>.json`: `{decision_id, structure, objective}`. A decision file already in the repo with no stored evaluations is a draft: the author starts from it.
+- **The intake file**, `moonbounce/<decision_id>.intake.json`: the editable task, provenance-bearing facts, material references and remaining constraints. Its task preserves the requested endpoint and stopping point. Upload it to create or revise an advisory plan; keep actual policy and example content in their own files.
+- **The plan progress record**, `work/plan-progress.json`: the stored plan ID, remaining allowances, artifact fingerprints, evidence references and deferred work. Read the plan remotely; this file records execution evidence rather than copying recommendations. Reconcile the current request and verify artifacts/reports before reusing them.
+- **The decision file**, `moonbounce/<decision_id>.json`: `{decision_id, structure, objective}`. It may be an unregistered candidate or a registered version. No stored live evaluations does not mean it is untested: verify its hash and current or archived scoring evidence before deciding whether authoring or measurement is needed.
 - **The brief**, `moonbounce/<decision_id>.brief.md`. It holds the flow's front matter (see the skill's [Where a flow stands](../SKILL.md#where-a-flow-stands)) and these sections:
   - **Description**: one sentence on what the decision decides, which reviewers read in Moonbounce.
   - First the policy, in sections the person can hand to their team as it is:

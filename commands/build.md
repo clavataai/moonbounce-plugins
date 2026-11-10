@@ -1,10 +1,12 @@
 ---
-description: Build a Moonbounce decision from a policy, labeled data or a description, or resume it at the stage its brief records
+description: Plan creating a decision through conversational intake
 argument-hint: <decision_id>
 ---
 
-Run the build flow, which builds a new decision from a policy, labeled data or a description, for the Moonbounce decision `$ARGUMENTS`.
+Use the `decisions` skill's `references/intake.md` procedure for `$ARGUMENTS`.
 
-If no decision id was given, ask for one: a lowercase id such as `refund-exception`. Then use the `decisions` skill: read its "Flows" section and its build guide, `references/build.md`, and follow them.
+Read `get_decision_intake`, use `operation: create` when it matches the user's request, inspect supplied materials and reuse known facts. Do not infer the operation merely from the existence of a decision file. Use a known decision ID from the request or artifacts; clarify an ambiguous target before writing.
 
-Where the flow stands is the front matter of `moonbounce/$ARGUMENTS.brief.md`. If it records `flow: build` with a `stage` that isn't `done`, resume at that stage; at `stage: red_team` with `mode: quick`, the build was paused after a quick first version, so ask first, as the guide's "Quick mode" section says. If it records `flow: improve`, at any stage, ask before replacing it. If it records `stage: done`, the decision is built: ask whether the person wants to start over, which rewrites the brief, or improve it from feedback (`/moonbounce:improve`). Otherwise start at `objective`. Say which stage you are starting at and why before doing anything else.
+Write and upload the intake, then call `create_decision_plan` with the received upload ID. Read an existing plan and verify its artifacts when resuming. Follow the selected stage procedures through the adapter, preserving remaining budgets. Missing tools or guidance are requirements to report, not a reason to run another workflow. Assessment never edits the candidate or settings; authoring alone never registers or scores.
+
+Preserve the requested endpoint and stopping point in the intake task. A quick, scored first version requires actual measurement, not an untested draft; perform registration/objective setup only when the selected score or use requires it and the operation authorizes it. Verify the report's actual objective; disclose balanced-loss scoring when no custom objective is stored. Stop after the requested report without automatically adding tuning, later checks, import or app wiring. Disclose any deferred evidence goals.

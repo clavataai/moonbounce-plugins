@@ -1,15 +1,12 @@
 ---
-description: Start or resume work on a Moonbounce decision; picks the build or improve flow from what you ask for and what exists
+description: Start or resume a decision with conversational intake and an advisory plan
 argument-hint: [decision_id] [what you want to do]
 ---
 
-Start or resume work on a Moonbounce decision: `$ARGUMENTS`.
+Use the `decisions` skill's `references/intake.md` procedure for `$ARGUMENTS`.
 
-Use the `decisions` skill and read its "Flows" section. If no decision id was given, ask for one: a lowercase id such as `refund-exception`. Then pick the flow by the skill's rules:
+Read `get_decision_intake`, establish create, revise, assess or investigate from the user's request, inspect supplied materials and reuse known facts. Do not infer the operation merely from the existence of a decision file. Use a known decision ID from the request or artifacts; clarify an ambiguous target before writing.
 
-1. If the request says what to do (build a decision, from a policy, labeled data or a description, or improve one from its feedback), run that flow. If the brief records the other flow, ask before replacing it, unless it records the build flow at `done`, or paused in quick mode (`mode: quick` at `stage: red_team`), and the request is to improve: that is where the improve flow starts.
-2. Otherwise, if `moonbounce/<decision_id>.brief.md` records a `stage` that isn't `done`, resume that flow at that stage. A build paused in quick mode (`mode: quick` at `stage: red_team`) is the exception: ask first, as the build guide's "Quick mode" section says.
-3. Otherwise, if the decision is in use in the key's environment (labeled cases from `list_cases`, or live traffic from `list_evaluations` with `assignment_mode: primary`), start the improve flow at `brief_check`.
-4. Otherwise, start the build flow at `objective`.
+Write and upload the intake, then call `create_decision_plan` with the received upload ID. Read an existing plan and verify its artifacts when resuming. Follow the selected stage procedures through the adapter, preserving remaining budgets. Missing tools or guidance are requirements to report, not a reason to run another workflow. Assessment never edits the candidate or settings; authoring alone never registers or scores.
 
-Say which flow and stage you picked and why before doing anything else, so the person can redirect you. Then follow that flow's guide: `references/build.md` or `references/improve.md`.
+Preserve the requested endpoint and stopping point in the intake task. A quick, scored first version requires actual measurement, not an untested draft; perform registration/objective setup only when the selected score or use requires it and the operation authorizes it. Verify the report's actual objective; disclose balanced-loss scoring when no custom objective is stored. Stop after the requested report without automatically adding tuning, later checks, import or app wiring. Disclose any deferred evidence goals.

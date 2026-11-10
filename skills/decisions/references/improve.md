@@ -1,21 +1,24 @@
 # The improve flow: a decision in use
 
+Use this as a library of stage procedures selected by the stored advisory plan and [intake adapter](intake.md). The adapter controls transitions, limits and effects; do not run this page as an independent workflow.
+
+
 The decision exists and real feedback is the main signal. There is no "shipped version" pointer: each evaluation records whichever version ran.
 
 | Stage | Does | Leaves | Done when |
 |---|---|---|---|
-| `brief_check` | Finds the version in use, then checks the brief against it and recent feedback: each clause covered, each question traced to a clause, no reviewer reason or `expected_outcome` contradicting it. Drafts one from the version when none exists | Brief edits, its new version hash and date | **Stop:** the user confirms the gaps or the drafted brief |
-| `baseline` | Picks the version: the latest with primary traffic, or one the user names; scores it | Baseline loss report | A baseline exists |
-| `cases` | Lists the labeled cases, whatever version they ran under; adds targeted synthesis (rare outcomes, unseen edge cases, new policy clauses, regression probes) | Case list, synthetic JSONL | The usable cases are known, with drop reasons |
-| `refine` | The refine loop, backtesting each candidate against the last kept version on the labeled cases | Accepted versions, each registered as it is kept; loss reports | **Stop:** the user says it's good enough |
-| `red_team` | A red team (another model when the user has one) attacks what the settled version changed; the round is labeled blind, settled with the user, scored once and joins the synthetic set | `work/red-<n>.jsonl`, synthetic additions | **Stop** after each round: the user chooses `refine` (recommended when it broke a costly or severe mistake; the new version is attacked next), another round, or `ship` (recommended when it broke nothing worse than a normal mistake, or after three rounds) |
-| `ship` | Registers the chosen version; the app starts running it | Decision file, registered hash | **Stop:** the user decides to ship. Spot checks measure it afterwards |
+| `brief_check` | Checks the selected version, brief and feedback for relevant gaps; assess reports discrepancies without editing the candidate or settings | Scoped brief findings, selected version and evidence references | The requested inspection is reported; any correction follows the selected operation and authorization |
+| `baseline` | Pins the user-selected version, objective and model; obtains or reuses measurement appropriate to the requested scope | Baseline loss report | A verified baseline report exists, or the blocked/unmeasured parts are explicitly reported |
+| `cases` | Audits available labeled cases and prepares only selected gaps or regression cases, preserving provenance and independent groups | Case list, synthetic JSONL | The usable cases are known, with drop reasons |
+| `refine` | The refine loop, backtesting each candidate against the last kept version on the labeled cases | Kept local candidates and comparison reports; registration only when selected and authorized | The requested stopping point or remaining allowance is reached, with kept/rejected changes reported |
+| `red_team` | A red team (another model when the user has one) attacks what the settled version changed; the round is labeled blind, settled with the user, scored once and joins the synthetic set | `work/red-<n>.jsonl`, synthetic additions | The scoped attack report is complete; further repair, attacks or deployment follow the user's request |
+| `ship` | Registers the selected version when requested; application wiring and deployment are separate explicit work | Decision file, registered hash | The requested registration is verified; no application change follows automatically |
 
-At a **Stop**, show the person what the stage left and wait for their answer before moving on. When the question is how a case should go or which clause wins, ask what the person would decide before showing your recommendation, as the [Stop format](../SKILL.md#what-the-person-sees) says. When a stage is done, set the brief's `stage` to the next one and its `date` to today, and commit only when the brief's `commits` names a branch.
+At a **Stop**, show the person what the stage left and wait for their answer before moving on. When the question is how a case should go or which clause wins, ask what the person would decide before showing your recommendation, as the [Stop format](../SKILL.md#what-the-person-sees) says. Record completed work and the currently selected procedure in the brief with its current date, and commit only when the brief's `commits` names a branch.
 
 The brief is context here. When it exists, it settles which side is right when feedback conflicts, and a policy change updates it first. Reports show human-labeled and synthetic cases apart, and real data decides when they disagree.
 
-Use the key for the environment whose traffic you are improving, usually production. Scoring is always dry runs, which store no evaluation; each run keeps its results and labels for about a day, then they are gone, as uploads are. Beyond those runs and uploads, only these steps write: registering a version (`register_decision`, at `baseline` and for each kept version), storing the objective (`set_objective`, before the first scoring when the stored one differs from the decision file's, and at `ship`), storing the description (`set_description`, at `brief_check`, or at `baseline` when the decision isn't registered until then), a label the person has you correct (at `brief_check`, or a ruling on a stored synthetic case in `refine`: [Check before you fit](refine.md#check-before-you-fit)), and `ship`. Registering changes nothing the decision runs.
+Use the key for the environment whose traffic you are improving, usually production. Scoring is always dry runs, which store no evaluation; each run keeps its results and labels for about a day, then they are gone, as uploads are. Beyond those runs and uploads, selected and authorized create/revise work can also write: registering a version (`register_decision`, only when selected use or requested objective setup requires it), storing the objective (`set_objective`, before the first scoring when the stored one differs from the decision file's, and at `ship`), storing the description (`set_description`, at `brief_check`, or at `baseline` when the decision isn't registered until then), a label the person has you correct (at `brief_check`, or a ruling on a stored synthetic case in `refine`: [Check before you fit](refine.md#check-before-you-fit)), and `ship`. Registering changes nothing the decision runs.
 
 Two writes change what a decision in use does, so each is a **Stop**: say what it changes, and wait for the person's yes.
 
@@ -26,7 +29,7 @@ Two writes change what a decision in use does, so each is a **Stop**: say what i
 
 ### `brief_check`
 
-**After a build paused in quick mode** (the brief records `flow: build`, `mode: quick` at `stage: red_team`), the decision may have no stored cases, and most of its dataset's labels were written by agents. When `work/runs.json` records an import that didn't finish, finish it first ([Resuming an import](import.md#resuming-an-import)). Otherwise, when it has no stored cases, store the dataset first, with the person's go-ahead, as [Importing a dataset](import.md) says (the dataset only, `examples.jsonl`, by the kept version's registered hash), saying how many of their labeled lines stay out in `work/held-back.jsonl`; when they decline, the build stays paused and this flow ends here. Then count the human and `unknown` cases (`list_cases` with each `label_source`): with about 50 or more, go on; with fewer, tell the person this flow would mostly tune the decision to labels agents wrote, recommend waiting for reviews and feedback from real traffic to add up, or hardening the build instead (the build flow's quick mode), and go on only on their yes. When they choose to wait or to harden, this flow ends here: none of the steps below runs, and the brief stays exactly as it is.
+When resuming after an initial measurement, use the current request, stored plan and verified evidence to select the next work. A local dataset can be scored through an items upload; import it only when example storage is requested. Resume an unfinished import only when import is selected. Report the confidence and coverage of available labels, including synthetic ones, without requiring a fixed human-label count, a full-build restart or an automatic import before useful work can continue.
 
 First find the version in use: `list_evaluations` with `assignment_mode: primary` and `limit: 1`, and read `version.structure_hash`. With no primary traffic yet (just after the build flow, say), use the newest imported example's (`assignment_mode: example`). With no evaluations at all, use the repo's decision file: the hash its upload answers ([Upload a file](tasks.md#upload-a-file)) is the version in use, and `get_version` with it tells you whether it's registered. Without a file, use the newest registered version (`list_versions`, newest number first) and say so. With none of these, there is nothing to improve yet: tell the person and suggest the build flow. Read it with `get_version` (its `ref` is the hash or the version number). When the repo has no decision file (the decision lives in the app's code), write `moonbounce/<decision_id>.json` from it as `{decision_id, structure, objective}`, with the stored objective from `get_objective` (leave `objective` out when none is stored), and tell the person. When the repo has one, check it is the same version: the decision file's upload must answer that hash. If they differ, ask the person which one is current.
 
@@ -35,11 +38,11 @@ Then read `moonbounce/<decision_id>.brief.md`. When there is no brief, draft one
 - each question's instructions and criteria become clauses;
 - the result's outcomes become the Outcomes section.
 
-Ask the person about every clause you had to infer.
+Record inferred clauses and their basis. Clarify only a consequential ambiguity or required ruling; supported assumptions can remain visible without asking the person to restate every inferred clause.
 
-Only when the flow goes ahead (no paused quick build before it, about 50 real labels after one, or the person's yes), set or update the front matter: `flow: improve`, `stage: brief_check`.
+When this procedure is selected, record its execution context in the front matter: `flow: improve`, `stage: brief_check`. Front matter does not select the next procedure or override the current request and plan.
 
-When the decision has no description (`get_decision` reports `description: null`, or the decision isn't registered yet), or a policy change the person confirms makes it wrong, write the brief's Description sentence and confirm it with the person at this stage's Stop. Store it once the decision exists ([Describe the decision](tasks.md#describe-the-decision)).
+When the decision has no description (`get_decision` reports `description: null`, or the decision isn't registered yet), or a policy change the person confirms makes it wrong, write the brief's Description sentence and confirm it with the person at this stage's Stop. Store it once the decision exists only for selected, authorized live create/revise work ([Describe the decision](tasks.md#describe-the-decision)). Assess and draft-only plans report a needed description change without storing it.
 
 Then check the brief against what the decision does and what people said:
 
@@ -56,9 +59,11 @@ Record the version hash you checked against (`structure_hash`) and the date in t
 
 ### `baseline`
 
+Under an intake plan, assess and draft-only work registers nothing and changes no model, objective or description settings. A missing registration or different stored objective during assessment is a conflict to report; use only measurement compatible with the pinned candidate and objective.
+
 The baseline is the version `brief_check` found, unless the person names another.
 
-If the baseline isn't registered (the repo's decision file, say), register it first by the hash its upload answered ([Register it](tasks.md#register-it)). Score it on the cases with `create_run` with `cases` and `loss_report`, with one run per label source: `cases.label_source` takes one value, so `human`, `unknown` and `synthetic` are three runs. Check `list_cases` with each `label_source` first and skip a source with no cases, since a case run that matches nothing is a 400 `NO_CASES`. A case run takes at most 200 cases: with more, page it (`cases.limit: 200`, then `cases.cursor` set to the last run's `cases.next_cursor`) and list every page's run on its side of `loss_report`, which takes at most 50 runs a side, resent failures included: with more cases than that holds, score the newest pages that fit, the same pages for every version, and say so. Keep the reports and run ids. The baseline is the first kept version, so it is what the first candidate must beat. If the objective isn't stored in this environment, or differs from the decision file's, store it first (`set_objective`). Store the description too when `brief_check` wrote one before the decision existed (`set_description`).
+For selected, authorized live create/revise work, register an unregistered baseline first by the hash its upload answered ([Register it](tasks.md#register-it)). Score it on the cases with `create_run` with `cases` and `loss_report`, with one run per label source: `cases.label_source` takes one value, so `human`, `unknown` and `synthetic` are three runs. Check `list_cases` with each `label_source` first and skip a source with no cases, since a case run that matches nothing is a 400 `NO_CASES`. A case run takes at most 200 cases: with more, page it (`cases.limit: 200`, then `cases.cursor` set to the last run's `cases.next_cursor`) and list every page's run on its side of `loss_report`, which takes at most 50 runs a side, resent failures included: with more cases than that holds, score the newest pages that fit, the same pages for every version, and say so. Keep the reports and run ids. The baseline is the first kept version, so it is what the first candidate must beat. For that authorized create/revise setup, store the objective first if missing or different (`set_objective`), and the description when `brief_check` wrote one before the decision existed (`set_description`). Assess reports either mismatch without applying these writes.
 
 ### `cases`
 
@@ -78,7 +83,7 @@ Then add targeted synthesis where real cases are thin:
 - new policy clauses;
 - regression probes for a change you plan.
 
-Write it as [Writing cases](cases.md) says, fresh case writers each labeling their own cases, with three differences: size the set to the cases above, not about five a clause; there is no person's data to put in first; and each writer takes its own hundred of item ids above the highest `syn-` id already in the synthetic file, and their files merge into it, never into the build dataset. Write the result to `moonbounce/<decision_id>.synthetic.jsonl`, with `label_source: "synthetic"` (or `human` where the person settled the label). Those labels are checked in `refine`, before a candidate is changed to fit them ([Check before you fit](refine.md#check-before-you-fit)). These lines stay in the repo. They are scored over the file's upload ([refine.md](refine.md#score-a-version)), apart from the real cases, and never imported among the real cases.
+Write it as [Writing cases](cases.md) says, fresh case writers each labeling their own cases, with three differences: size the set to the selected gaps and allocated allowance; there is no person's data to put in first; and each writer takes its own hundred of item ids above the highest `syn-` id already in the synthetic file, and their files merge into it, never into the build dataset. Write the result to `moonbounce/<decision_id>.synthetic.jsonl`, with `label_source: "synthetic"` (or `human` where the person settled the label). Those labels are checked in `refine`, before a candidate is changed to fit them ([Check before you fit](refine.md#check-before-you-fit)). These lines stay in the repo. They are scored over the file's upload ([refine.md](refine.md#score-a-version)), apart from the real cases, and never imported among the real cases.
 
 Done when you can say how many usable cases there are, how many were dropped and why, and what the synthetic set adds.
 
@@ -100,37 +105,35 @@ Run each step once per label source that has cases, as in `baseline`, and judge 
 
 Score the synthetic set over its upload, a run per 200 lines, judged by its own `loss_report`. When the deciding report and the rest disagree, the deciding report wins.
 
-Register each version you keep (`register_decision` with its `structure_hash` alone, while its upload or one of its runs lives), so it can be the next base. `create_preview` gives the same comparison in one call when you only need the headline: it has no run ids to page and doesn't split by label source.
+Register a kept version only when the selected authorized use requires it (`register_decision` with its live structure hash); a kept local candidate and a deployed version are distinct. `create_preview` gives the same comparison in one call when you only need the headline: it has no run ids to page and doesn't split by label source.
 
 ### `red_team`
 
-The stored cases cover only what traffic has sent so far, and a reworded question or a moved cut can open a weakness no case touches. Once the person says `refine` is good enough, a red team attacks what the settled version changed ([A red-team round](red-team.md) has what the flows share):
+The stored cases cover only what traffic has sent so far, and a reworded question or a moved cut can open a weakness no case touches. When targeted attacks are selected, a red team examines the pinned candidate or requested revision diff ([A red-team round](red-team.md) has what the flows share):
 
 1. **Write.** Brief a fresh red team with the brief, the settled version, and the diff from the baseline: "Write 10 to 30 cases this change is likely to get wrong, whose right outcome the brief settles: paraphrases near a moved cut or threshold, cases that hinge on a reworded question's criteria, near-misses for a new question, and cases the old version got right that the change could break. Use only the inputs, types and ranges the brief lists. Work only inside the repo. Write files with your file tool, never with a heredoc or `echo`; a `cp` or a `jq` to a file under `moonbounce/` is fine, but never onto a file the command reads. Run one plain command at a time: no `cd`, `;` or `&&` chains, loops, shell variables, `$(…)` or heredocs. Never put the person's data or item ids in a command." It writes cases and intended labels apart, with `metadata.origin: "red"`. A round of 15 or more cases on more than three clauses goes to two or three writers at once, each on a share of the clauses the change touches ([Splitting the round](red-team.md#splitting-the-round)). Who writes it, another model included: [Who writes it](red-team.md#who-writes-it).
 2. **Label.** Settle the round's labels as [Settling its labels](red-team.md#settling-its-labels) says.
 3. **Keep.** Add the round to the end of `synthetic.jsonl`, so later candidates are scored on it, and record it, as [Keeping it](red-team.md#keeping-it) says.
 4. **Score.** Score the settled version once over the round's lines (`items_from` with `offset` the file's line count before them), and report it by attack.
-5. **Next: a Stop.** Show the round by attack, then recommend and let the person choose:
-   - **Back to `refine`**, recommended when the round broke a mistake the objective rates costly or severe (look up its cell's severity in the decision file's `objective`, not the report's outcome-weighted row `loss`). Read the right cases nearest each broken one (`like`) before the fix, then attack the version that comes out of it. On this return, a candidate that fixes red cases may leave the real-label loss unchanged, which `loss_report` doesn't accept: keep it by the [red-team repair rule](refine.md#keep-or-drop-a-change), and tell the person that is the rule you used.
-   - **Another red-team round** on the same version, while fewer than three have run.
-   - **On to `ship`**, recommended when the round broke nothing worse than a normal mistake, or after three rounds.
-
+5. **Report and stop where requested.** Report results by attack and the relevant loss severity, with provenance and limitations. Recommend useful follow-up work without automatically selecting repair, another round or deployment. If the user requests repair, use the requested scope and allowances, read the nearby right cases before fitting, and apply the [red-team repair rule](refine.md#keep-or-drop-a-change) when appropriate, disclosing that rule. An additional attack or application change is selected separately.
 
 Red cases are synthetic: they are reported apart and never outweigh real labels in deciding a keep. One rule still applies to them: a candidate that makes a new severe mistake on any label, red cases included, is dropped ([refine.md](refine.md#keep-or-drop-a-change)). So a round can block a dangerous change but can't carry one through.
 
 ### `ship`
 
-The person decides to ship. Then do these in order:
+Select the requested effects separately; this section is not a mandatory continuation after scoring or an attack report. Assessment does not select any of these writes:
 
-1. Register the chosen version in each environment it will run in (`register_decision`), and check the returned `version.structure_hash` against the one you scored.
-2. Check the model in effect (`get_model`), and store the decision file's objective (`set_objective`; `unknown_outcomes` must be empty).
-3. Save the chosen version in the decision file, and commit it only when the brief's `commits` names a branch. Then offer to put the new version in the app ([Wire it into the app](tasks.md#wire-it-into-the-app)), which stops for the person before touching their code: an app that sends the decision file inline needs only a deploy, and one that sends a hash needs the new hash. Evaluations start recording the new hash once the app runs it.
+1. **Selected registration.** Register the chosen version in the requested environment (`register_decision`), and check the returned `version.structure_hash` against the one you scored.
+2. **Selected live setup.** Check the model in effect (`get_model`), and store the objective only when that setup is requested and authorized (`set_objective`; `unknown_outcomes` must be empty).
+3. Save the chosen version in the decision file, and commit it only when the brief's `commits` names a branch. Application changes are a separate explicit request; when selected, put the version in the app ([Wire it into the app](tasks.md#wire-it-into-the-app)), which stops for the person before touching their code: an app that sends the decision file inline needs only a deploy, and one that sends a hash needs the new hash. Evaluations start recording the new hash once the app runs it.
 
-Set the brief's `structure_hash` to the shipped hash and `stage` to `done`.
+Record the verified registered hash and completion of the selected work. Registration alone does not mean the application deployed or began using that version.
 
 Spot checks are the measure of what was shipped: a random sample of production evaluations that the person's reviewers label in Moonbounce's Review app. They happen only when the team reviews, so tell the person that without reviews there is no measure after shipping. The next run of the improve flow reads them as cases.
 
 ## Going back
 
-- **A policy change or a contradiction found at `refine`:** go back to `brief_check`. Then re-run `baseline`, because the objective or the labels may have moved.
-- **New feedback arriving mid-loop:** re-run `cases` before the next candidate.
+These are evidence-invalidation triggers, not mandatory transitions. Reconcile the current request, valid receipts and remaining limits before selecting affected procedures. Assessment reports the consequences without repairing the candidate or changing settings.
+
+- **Changed policy or a contradiction:** inspect the affected brief, labels and comparisons. Select repairs and new measurement only when needed for the current request; assessment reports incompatibilities without editing the candidate or settings.
+- **New feedback during requested refinement:** verify its relevance and label eligibility before a further comparison. Reuse the unaffected comparison set; do not restart unrelated work or expand the requested scope automatically.
