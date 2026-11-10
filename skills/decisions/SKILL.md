@@ -154,6 +154,8 @@ Three messages always have the same shape, so the person can compare rounds and 
 
 **Talk to the person in their words, not this guide's.** "Stop" is the guide's word for a point where you wait for them; never write it to them, in a dialog or in text, including in passing ("I'll bring you the Stop again"). Say what happens instead: "I'll bring you the updated objective to confirm." The same goes for the guide's other terms: say "cost so far", not "the Cost line"; describe a stage the first time you name it ("`red_team`: another model tries to break the decision"). Name a finished stage in plain words: "The objective is set.", "The brief is ready for you to check."
 
+**Before any step that takes more than a minute, say what is starting, why, about how long it takes and what you'll bring back,** in one or two plain sentences. Agents working out of sight are the part of a flow people find most confusing. For example: "Next, separate agents write test cases from your policy while another drafts the decision, so it's tested on cases its author never shaped. This takes about ten minutes, and then I'll score the draft and show you how it did." Typical times in a full build: writing the cases, 5 to 13 minutes, with the first draft of the decision running beside them and taking up to 12; one round of trying to break it, 5 to 12; storing the dataset, about 5. A quick build or a smaller dataset takes less, so scale these to the job. Say which part you're waiting on if the person asks, and when a step runs much longer than you said, tell them.
+
 **At a Stop**, use these three parts, in this order:
 
 ```markdown

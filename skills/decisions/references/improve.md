@@ -1,6 +1,6 @@
 # The improve flow: a decision in use
 
-The decision exists and real feedback is the main signal. There is no "shipped version" pointer: each evaluation records whichever version hash the caller sent.
+The decision exists and real feedback is the main signal. There is no "shipped version" pointer: each evaluation records whichever version ran.
 
 | Stage | Does | Leaves | Done when |
 |---|---|---|---|
@@ -9,7 +9,7 @@ The decision exists and real feedback is the main signal. There is no "shipped v
 | `cases` | Lists the labeled cases, whatever version they ran under; adds targeted synthesis (rare outcomes, unseen edge cases, new policy clauses, regression probes) | Case list, synthetic JSONL | The usable cases are known, with drop reasons |
 | `refine` | The refine loop, backtesting each candidate against the last kept version on the labeled cases | Accepted versions, each registered as it is kept; loss reports | **Stop:** the user says it's good enough |
 | `red_team` | A red team (another model when the user has one) attacks what the settled version changed; the round is labeled blind, settled with the user, scored once and joins the synthetic set | `work/red-<n>.jsonl`, synthetic additions | **Stop** after each round: the user chooses `refine` (recommended when it broke a costly or severe mistake; the new version is attacked next), another round, or `ship` (recommended when it broke nothing worse than a normal mistake, or after three rounds) |
-| `ship` | Registers the chosen version; the caller's code starts sending its hash | Decision file, registered hash | **Stop:** the user decides to ship. Spot checks measure it afterwards |
+| `ship` | Registers the chosen version; the app starts running it | Decision file, registered hash | **Stop:** the user decides to ship. Spot checks measure it afterwards |
 
 At a **Stop**, show the person what the stage left and wait for their answer before moving on. When the question is how a case should go or which clause wins, ask what the person would decide before showing your recommendation, as the [Stop format](../SKILL.md#what-the-person-sees) says. When a stage is done, set the brief's `stage` to the next one and its `date` to today, and commit only when the brief's `commits` names a branch.
 
@@ -124,7 +124,7 @@ The person decides to ship. Then do these in order:
 
 1. Register the chosen version in each environment it will run in (`register_decision`), and check the returned `version.structure_hash` against the one you scored.
 2. Check the model in effect (`get_model`), and store the decision file's objective (`set_objective`; `unknown_outcomes` must be empty).
-3. Save the chosen version in the decision file, and commit it only when the brief's `commits` names a branch. Then offer to change the app to send the new hash ([Wire it into the app](tasks.md#wire-it-into-the-app)), which stops for the person before touching their code. Evaluations start recording the new hash once the app sends it.
+3. Save the chosen version in the decision file, and commit it only when the brief's `commits` names a branch. Then offer to put the new version in the app ([Wire it into the app](tasks.md#wire-it-into-the-app)), which stops for the person before touching their code: an app that sends the decision file inline needs only a deploy, and one that sends a hash needs the new hash. Evaluations start recording the new hash once the app runs it.
 
 Set the brief's `structure_hash` to the shipped hash and `stage` to `done`.
 
