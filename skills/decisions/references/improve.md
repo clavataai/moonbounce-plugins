@@ -15,7 +15,7 @@ At a **Stop**, show the person what the stage left and wait for their answer bef
 
 The brief is context here. When it exists, it settles which side is right when feedback conflicts, and a policy change updates it first. Reports show human-labeled and synthetic cases apart, and real data decides when they disagree.
 
-Use the key for the environment whose traffic you are improving, usually production. Scoring is always dry runs, which store no evaluation; each run keeps its results and labels for about a day, then they are gone, as uploads are. Beyond those runs and uploads, only these steps write: registering a version (`register_decision`, at `baseline` and for each kept version), storing the objective (`set_objective`, before the first scoring when the stored one differs from the decision file's, and at `ship`), a label the person has you correct (at `brief_check`, or a ruling on a stored synthetic case in `refine`: [Check before you fit](refine.md#check-before-you-fit)), and `ship`. Registering changes nothing the decision runs.
+Use the key for the environment whose traffic you are improving, usually production. Scoring is always dry runs, which store no evaluation; each run keeps its results and labels for about a day, then they are gone, as uploads are. Beyond those runs and uploads, only these steps write: registering a version (`register_decision`, at `baseline` and for each kept version), storing the objective (`set_objective`, before the first scoring when the stored one differs from the decision file's, and at `ship`), storing the description (`set_description`, at `brief_check`, or at `baseline` when the decision isn't registered until then), a label the person has you correct (at `brief_check`, or a ruling on a stored synthetic case in `refine`: [Check before you fit](refine.md#check-before-you-fit)), and `ship`. Registering changes nothing the decision runs.
 
 Two writes change what a decision in use does, so each is a **Stop**: say what it changes, and wait for the person's yes.
 
@@ -39,6 +39,8 @@ Ask the person about every clause you had to infer.
 
 Only when the flow goes ahead (no paused quick build before it, about 50 real labels after one, or the person's yes), set or update the front matter: `flow: improve`, `stage: brief_check`.
 
+When the decision has no description (`get_decision` reports `description: null`, or the decision isn't registered yet), or a policy change the person confirms makes it wrong, write the brief's Description sentence and confirm it with the person at this stage's Stop. Store it once the decision exists ([Describe the decision](tasks.md#describe-the-decision)).
+
 Then check the brief against what the decision does and what people said:
 
 - **Every clause is covered:** some question or rule applies it.
@@ -56,7 +58,7 @@ Record the version hash you checked against (`structure_hash`) and the date in t
 
 The baseline is the version `brief_check` found, unless the person names another.
 
-If the baseline isn't registered (the repo's decision file, say), register it first by the hash its upload answered ([Register it](tasks.md#register-it)). Score it on the cases with `create_run` with `cases` and `loss_report`, with one run per label source: `cases.label_source` takes one value, so `human`, `unknown` and `synthetic` are three runs. Check `list_cases` with each `label_source` first and skip a source with no cases, since a case run that matches nothing is a 400 `NO_CASES`. A case run takes at most 200 cases: with more, page it (`cases.limit: 200`, then `cases.cursor` set to the last run's `cases.next_cursor`) and list every page's run on its side of `loss_report`, which takes at most 50 runs a side, resent failures included: with more cases than that holds, score the newest pages that fit, the same pages for every version, and say so. Keep the reports and run ids. The baseline is the first kept version, so it is what the first candidate must beat. If the objective isn't stored in this environment, or differs from the decision file's, store it first (`set_objective`).
+If the baseline isn't registered (the repo's decision file, say), register it first by the hash its upload answered ([Register it](tasks.md#register-it)). Score it on the cases with `create_run` with `cases` and `loss_report`, with one run per label source: `cases.label_source` takes one value, so `human`, `unknown` and `synthetic` are three runs. Check `list_cases` with each `label_source` first and skip a source with no cases, since a case run that matches nothing is a 400 `NO_CASES`. A case run takes at most 200 cases: with more, page it (`cases.limit: 200`, then `cases.cursor` set to the last run's `cases.next_cursor`) and list every page's run on its side of `loss_report`, which takes at most 50 runs a side, resent failures included: with more cases than that holds, score the newest pages that fit, the same pages for every version, and say so. Keep the reports and run ids. The baseline is the first kept version, so it is what the first candidate must beat. If the objective isn't stored in this environment, or differs from the decision file's, store it first (`set_objective`). Store the description too when `brief_check` wrote one before the decision existed (`set_description`).
 
 ### `cases`
 

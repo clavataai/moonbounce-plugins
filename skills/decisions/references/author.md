@@ -16,5 +16,6 @@ The first registration stores the deployment's default model as the environment'
 
 1. **The model** (`set_model`): the one production will run (`list_models` names the choices). When the decision already has evaluations in this environment, it is in use: keep its model (`get_model`), since a change moves its live traffic at once, and change it only on the person's explicit yes.
 2. **The objective** (`set_objective`), and check that `unknown_outcomes` is empty.
+3. **The description**: the brief's Description sentence, as the person confirmed it ([Describe the decision](tasks.md#describe-the-decision)). A brief written without one gets one first, confirmed with the person. When `get_decision` shows a different sentence, show the person both before replacing it.
 
 Put the version's hash in the brief's front matter. Done when it validates, is registered, and every clause maps to a question or rule.

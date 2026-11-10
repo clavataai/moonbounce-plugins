@@ -4,6 +4,7 @@ The files every flow keeps in the caller's repo, so a flow resumes from the repo
 
 - **The decision file**, `moonbounce/<decision_id>.json`: `{decision_id, structure, objective}`. A decision file already in the repo with no stored evaluations is a draft: the author starts from it.
 - **The brief**, `moonbounce/<decision_id>.brief.md`. It holds the flow's front matter (see the skill's [Where a flow stands](../SKILL.md#where-a-flow-stands)) and these sections:
+  - **Description**: one sentence on what the decision decides, which reviewers read in Moonbounce.
   - First the policy, in sections the person can hand to their team as it is:
     - **Outcomes**: each outcome with a one-line definition, and what `escalate` or an abstention means.
     - **Scope**: what is in scope and what is out.

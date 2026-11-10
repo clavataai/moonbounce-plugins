@@ -174,6 +174,18 @@ Before each task, list tools, find the one whose description matches the goal, a
 
 **Done when:** `get_objective` shows the hash of the decision file's objective, and `unknown_outcomes` is empty. To check, compare the `objective` `get_objective` returns with the decision file's, field by field; don't hash it by hand.
 
+## Describe the decision
+
+**Goal:** Tell the people reviewing a decision what it decides, in one sentence.
+
+**Find:** Find “Set what a decision decides, in one sentence” (`set_description`, `PUT /v1/decisions/{decision_id}/description`). Read its `inputSchema` before first use.
+
+**Request fields:** `{"description": "<one sentence>"}`, or `{"description": null}` to clear it: one line, 1 to 200 characters, trimmed. The sentence comes from the brief's Description section when there is a brief. Send that sentence alone, since it is stored and shown as written. Without a brief, write it from what the person says the decision is for, and show them before storing it.
+
+**Gotchas:** It is the organization's, like the decision, so a test key and a production key share one value and the last write wins, with no history. It lives outside the decision file and the structure, so it never changes `structure_hash`, and registering a version leaves it alone. 404 until the decision exists. The call always answers 200, and `changed` is false when it already read that way.
+
+**Done when:** `get_decision` returns the sentence as `description`.
+
 ## Check cost
 
 **Goal:** Read evaluation and preview spending for a decision and window in the intended environment.
@@ -228,7 +240,7 @@ Fresh evaluate and `import_examples` responses always include `cost`. Single-ite
 
 **Request:** `list_decisions`, `get_decision`, `list_versions` and `get_version` accept either `decisions:evaluate` or `decisions:develop`; evaluation reads require `decisions:evaluate`. Lists accept `limit` (1–100, default 50) and `cursor`. Follow `next_cursor` while `has_more` is true. Evaluation filters include `item_id`, `assignment_mode` and inclusive `since` / exclusive `until`.
 
-**Gotchas:** Decisions and versions belong to the whole organization: test and production keys list the same ones, `created_at` is when they were first registered, and a decision registered in production can be listed by a test key before it has a model setting there. Evaluations are environment-specific; lists omit content. `list_decisions` and `get_decision` items carry `version_count` and the `newest_version`; `list_versions` items carry each version's `structure_hash`, `number` and question hashes in `question_hashes`, newest number first; `list_evaluations` items carry `status`, `value`, `outcome` and `version.structure_hash`. `register_decision` returns hashes without the decision's definition; `get_version` takes the hash or the number as `ref` and returns the definition as `structure`, in authored key order, with its hashes. `get_evaluation` returns the evaluate shape plus `assignment_mode`, the recorded `cost` when a usage row exists, and `content: {state, attribute_values?}` when stored, otherwise `content: null`. A stored JSON null is `{state: null}` inside `content`. The internal `store_state` setting defaults to true. `list_feedback` remains HTTP only.
+**Gotchas:** Decisions and versions belong to the whole organization: test and production keys list the same ones, `created_at` is when they were first registered, and a decision registered in production can be listed by a test key before it has a model setting there. Evaluations are environment-specific; lists omit content. `list_decisions` and `get_decision` items carry `description`, `version_count` and the `newest_version`; `list_versions` items carry each version's `structure_hash`, `number` and question hashes in `question_hashes`, newest number first; `list_evaluations` items carry `status`, `value`, `outcome` and `version.structure_hash`. `register_decision` returns hashes without the decision's definition; `get_version` takes the hash or the number as `ref` and returns the definition as `structure`, in authored key order, with its hashes. `get_evaluation` returns the evaluate shape plus `assignment_mode`, the recorded `cost` when a usage row exists, and `content: {state, attribute_values?}` when stored, otherwise `content: null`. A stored JSON null is `{state: null}` inside `content`. The internal `store_state` setting defaults to true. `list_feedback` remains HTTP only.
 
 **Done when:** The requested page or record is read in the intended environment; fetch a definition or state only when the task needs it.
 
