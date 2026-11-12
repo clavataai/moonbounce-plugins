@@ -17,10 +17,10 @@ The two hosts share `skills/` and `.mcp.json`. `.claude-plugin/` configures Clau
 ### Claude Code
 
 ```sh
-claude plugin install moonbounce --marketplace clavataai/moonbounce-plugins
+claude plugin install moonbounce --marketplace moonbounce-ai/moonbounce-plugins
 ```
 
-That needs Claude Code 2.1.292 or later; on an older version, run `claude plugin marketplace add clavataai/moonbounce-plugins`, then `claude plugin install moonbounce@moonbounce`.
+That needs Claude Code 2.1.292 or later; on an older version, run `claude plugin marketplace add moonbounce-ai/moonbounce-plugins`, then `claude plugin install moonbounce@moonbounce`.
 
 Then sign in: run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** (Claude Code also shows a notice at startup when it's needed; your agent can't start sign-in for you). Invoke `/moonbounce:build` and describe what you want to build, improve, assess or resume. Include a decision ID if known; the agent can list registered decisions to find it, and retrieve a server-only decision without an existing local file. The agent reuses the conversation and materials, proposes the needed work and follows the requested scope and stopping point. Use `/moonbounce:decide` to apply an existing decision to inputs; `/moonbounce:decisions` remains available for compatibility. Other MCP clients can use the `build_decision` and `decide` prompts through server-owned guidance. The plugin is a thin entry point: the returned plan identifies each stage's guidance, and `get_decision_guidance` resolves its pinned version and related role instructions.
 
@@ -49,7 +49,7 @@ agent mcp login moonbounce
 Install the plugin with a Codex CLI that supports `codex plugin`:
 
 ```sh
-codex plugin marketplace add https://github.com/clavataai/moonbounce-plugins.git
+codex plugin marketplace add https://github.com/moonbounce-ai/moonbounce-plugins.git
 codex plugin add moonbounce@moonbounce
 codex mcp login moonbounce
 ```
@@ -78,7 +78,7 @@ Claude Code plugin installation from GitHub was observed with 2.1.312 in a clean
 Plugin users should not also install a standalone copy of the same skill in that host. Choose one installation route per host. For other agents, with Node.js 22.20 or later:
 
 ```sh
-npx skills add clavataai/moonbounce-plugins --skill build decide
+npx skills add moonbounce-ai/moonbounce-plugins --skill build decide
 ```
 
 Optionally add `-a cursor -a codex`, `-g` for global installation, or `-y` for non-interactive installation. This installs the skill; connect MCP separately above.

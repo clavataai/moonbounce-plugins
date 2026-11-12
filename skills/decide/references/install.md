@@ -7,13 +7,13 @@ How to connect each agent to Moonbounce and install this skill. This shared refe
 One command adds the marketplace and installs (Claude Code 2.1.292 or later) ([install](https://code.claude.com/docs/en/plugins/install.md#add-a-marketplace-and-install-in-one-command)):
 
 ```sh
-claude plugin install moonbounce --marketplace clavataai/moonbounce-plugins
+claude plugin install moonbounce --marketplace moonbounce-ai/moonbounce-plugins
 ```
 
 On an older Claude Code, add the marketplace, then install by plugin and marketplace name:
 
 ```sh
-claude plugin marketplace add clavataai/moonbounce-plugins
+claude plugin marketplace add moonbounce-ai/moonbounce-plugins
 claude plugin install moonbounce@moonbounce
 ```
 
@@ -50,7 +50,7 @@ Copy `build/` and `decide/` to `.agents/skills/` or `.cursor/skills/` (project),
 Install the plugin using a CLI with `codex plugin` support ([Codex plugins](https://developers.openai.com/plugins/build/plugins)):
 
 ```sh
-codex plugin marketplace add https://github.com/clavataai/moonbounce-plugins.git
+codex plugin marketplace add https://github.com/moonbounce-ai/moonbounce-plugins.git
 codex plugin add moonbounce@moonbounce
 codex mcp login moonbounce
 ```
@@ -75,7 +75,7 @@ Plugin users should not also install a standalone copy in the same host; that du
 With Node.js 22.20 or later, use the [skills installer](https://github.com/vercel-labs/skills), which supports many agents:
 
 ```sh
-npx skills add clavataai/moonbounce-plugins --skill build decide
+npx skills add moonbounce-ai/moonbounce-plugins --skill build decide
 ```
 
 Add `-a cursor -a codex` to select agents, `-g` for global installation, or `-y` for non-interactive installation ([installer options](https://github.com/vercel-labs/skills)).
