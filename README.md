@@ -5,10 +5,12 @@ Moonbounce decisions are JSON structures your code owns, evaluated by an engine 
 What's here:
 
 - Hosted MCP server: `https://api.moonbounce.ai/mcp`.
-- `skills/decisions/`: a skill for building and improving decisions with any agent that supports skills.
+- `skills/build/`: create and refine decision definitions.
+- `skills/decide/`: find and evaluate existing decisions.
+- `skills/decisions/`: the compatibility entry point.
 - Claude Code and Codex plugin installation, bundling the same MCP connection and skill.
 
-The two hosts share `skills/decisions/` and `.mcp.json`. `.claude-plugin/` configures Claude Code; `.codex-plugin/` and `.agents/plugins/marketplace.json` configure Codex.
+The two hosts share `skills/` and `.mcp.json`. `.claude-plugin/` configures Claude Code; `.codex-plugin/` and `.agents/plugins/marketplace.json` configure Codex.
 
 ## Connect the MCP server
 
@@ -20,9 +22,13 @@ claude plugin install moonbounce --marketplace clavataai/moonbounce-plugins
 
 That needs Claude Code 2.1.292 or later; on an older version, run `claude plugin marketplace add clavataai/moonbounce-plugins`, then `claude plugin install moonbounce@moonbounce`.
 
-Then sign in: run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** (Claude Code also shows a notice at startup when it's needed; your agent can't start sign-in for you). Invoke `/moonbounce:decisions` and describe what you want to build, improve, assess or resume. Include a decision ID if known; the agent can list registered decisions to find it, and retrieve a server-only decision without an existing local file. The agent reuses the conversation and materials, proposes the needed work and follows the requested scope and stopping point. Other MCP clients can use `build_decision` through server-owned guidance. The plugin is a thin entry point: the returned plan identifies each stage's guidance, and `get_decision_guidance` resolves its pinned version and related role instructions.
+Then sign in: run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** (Claude Code also shows a notice at startup when it's needed; your agent can't start sign-in for you). Invoke `/moonbounce:build` and describe what you want to build, improve, assess or resume. Include a decision ID if known; the agent can list registered decisions to find it, and retrieve a server-only decision without an existing local file. The agent reuses the conversation and materials, proposes the needed work and follows the requested scope and stopping point. Use `/moonbounce:decide` to apply an existing decision to inputs; `/moonbounce:decisions` remains available for compatibility. Other MCP clients can use the `build_decision` and `decide` prompts through server-owned guidance. The plugin is a thin entry point: the returned plan identifies each stage's guidance, and `get_decision_guidance` resolves its pinned version and related role instructions.
 
-For example: `/moonbounce:decisions refund-exception Build and register a quick, scored first version, then stop. No tuning or app changes yet.` This asks for a usable measured result, not an untested draft or a fixed Quick preset. The agent reports what was tested, the score, cost and remaining limitations; further work follows the user's request.
+For example: `/moonbounce:build refund-exception Build and register a quick, scored first version, then stop. No tuning or app changes yet.` This asks for a usable measured result, not an untested draft or a fixed Quick preset. The agent reports what was tested, the score, cost and remaining limitations; further work follows the user's request.
+
+### Decide with an existing decision
+
+Invoke `/moonbounce:decide` in Claude Code or `$moonbounce:decide` in Codex and describe the task, optionally naming a decision and version. The agent discovers a suitable decision, fetches its definition, gathers missing inputs and evaluates. It honors an explicit version; otherwise it selects the newest registered version and pins its hash for this task. Newest does not imply approval or measured quality. If nothing fits, it directs you to build. No repository, build plan or generated dataset is needed. Ordinary evaluations are recorded for history and feedback; an explicit dry run spends model calls without an evaluation record.
 
 ### Cursor
 
@@ -48,7 +54,7 @@ codex plugin add moonbounce@moonbounce
 codex mcp login moonbounce
 ```
 
-The app and CLI use the same local Codex configuration. Restart an already running app after installation if it has not picked up the connection. Invoke `$moonbounce:decisions` or select it in the skill picker; describe the requested work, for example `Improve refund-exception. Focus on false denials.` One skill handles all operations through MCP intake. Claude's slash command syntax is not a Codex entry point.
+The app and CLI use the same local Codex configuration. Restart an already running app after installation if it has not picked up the connection. Invoke `$moonbounce:build` or select it in the skill picker; describe the requested work, for example `Improve refund-exception. Focus on false denials.` Use `$moonbounce:decide` to apply an existing decision to inputs. `$moonbounce:decisions` remains available for compatibility. Claude's slash command syntax is not a Codex entry point.
 
 For MCP only, without installing the plugin:
 
@@ -65,29 +71,29 @@ Sign-in gives team admins and members `decisions:develop` and `decisions:evaluat
 
 ### Verification
 
-Claude Code plugin installation from GitHub was observed with 2.1.312 in a clean profile. Codex 0.167.0 was checked for native plugin installation, discovery of one enabled `moonbounce:decisions` skill and the bundled MCP declaration using an isolated configuration; production OAuth sign-in was not tested end to end. Cursor's agent CLI is checked up to the sign-in page and token exchange; its editor is not tested yet. The Skills CLI route is checked in an empty project.
+Claude Code plugin installation from GitHub was observed with 2.1.312 in a clean profile. Codex 0.167.0 was checked for native plugin installation, discovery of the enabled Moonbounce skills and the bundled MCP declaration using an isolated configuration; production OAuth sign-in was not tested end to end. Cursor's agent CLI is checked up to the sign-in page and token exchange; its editor is not tested yet. The Skills CLI route is checked in an empty project.
 
 ## Add the skill
 
 Plugin users should not also install a standalone copy of the same skill in that host. Choose one installation route per host. For other agents, with Node.js 22.20 or later:
 
 ```sh
-npx skills add clavataai/moonbounce-plugins --skill decisions
+npx skills add clavataai/moonbounce-plugins --skill build decide
 ```
 
 Optionally add `-a cursor -a codex`, `-g` for global installation, or `-y` for non-interactive installation. This installs the skill; connect MCP separately above.
 
-Or copy `skills/decisions/` into your agent's skills folder:
+Or copy the complete `skills/build/` and `skills/decide/` folders into your agent's skills folder:
 
 | Agent | Project folder | Personal folder | Invoke |
 | --- | --- | --- | --- |
-| Cursor | `.agents/skills/` or `.cursor/skills/` | `~/.agents/skills/` or `~/.cursor/skills/` | `/decisions` or automatically |
-| Codex | `.agents/skills/` | `~/.agents/skills/` | `$decisions` or `/skills` |
-| Claude Code | `.claude/skills/` | `~/.claude/skills/` | `/decisions` |
+| Cursor | `.agents/skills/` or `.cursor/skills/` | `~/.agents/skills/` or `~/.cursor/skills/` | `/build`, `/decide` or automatically |
+| Codex | `.agents/skills/` | `~/.agents/skills/` | `$build`, `$decide` or `/skills` |
+| Claude Code | `.claude/skills/` | `~/.claude/skills/` | `/build` or `/decide` |
 
 ## API keys
 
-Use a key with `decisions:develop` and/or `decisions:evaluate` as needed, and `env:test` for Test. Keep `MOONBOUNCE_API_KEY` in the agent's environment; never print or commit it. When both a signed-in server and a key-based server are connected, disable the signed-in one so the agent uses the key.
+Use a key with both `decisions:develop` (hosted guidance) and `decisions:evaluate` (evaluation) for decide, and `env:test` for Test. Keep `MOONBOUNCE_API_KEY` in the agent's environment; never print or commit it. When both a signed-in server and a key-based server are connected, disable the signed-in one so the agent uses the key.
 
 ### Claude Code
 

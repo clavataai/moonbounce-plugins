@@ -1,6 +1,6 @@
 {
   "name": "moonbounce",
-  "description": "Build and improve Moonbounce decisions with hosted guidance.",
+  "description": "Build, refine and use Moonbounce decisions with hosted guidance.",
   "author": { "name": "Moonbounce" },
   "license": "MIT",
   "repository": "https://github.com/clavataai/moonbounce-plugins",
@@ -9,6 +9,6 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Moonbounce",
-    "shortDescription": "Build and improve decisions with hosted guidance"
+    "shortDescription": "Build, refine and use existing decisions"
   }
 }

@@ -1,6 +1,6 @@
 # Install and share
 
-How to connect each agent to Moonbounce and install this skill. The public `skills/decisions/` folder is generated from this skill in Moonbounce's source repository.
+How to connect each agent to Moonbounce and install this skill. This shared reference is included in each exported entry skill.
 
 ## Claude Code plugin
 
@@ -17,9 +17,9 @@ claude plugin marketplace add clavataai/moonbounce-plugins
 claude plugin install moonbounce@moonbounce
 ```
 
-The skill loads as `decisions`, and the MCP server shows as `plugin:moonbounce:moonbounce` at `https://api.moonbounce.ai/mcp`, needing sign-in. An older install pointed at `https://app.moonbounce.ai/mcp`, which still works; moving to the api URL means signing in once more.
+The skills load as `build`, `decide` and the compatibility `decisions` entry, and the MCP server shows as `plugin:moonbounce:moonbounce` at `https://api.moonbounce.ai/mcp`, needing sign-in. An older install pointed at `https://app.moonbounce.ai/mcp`, which still works; moving to the api URL means signing in once more.
 
-Claude Code shows a startup notice when a server needs sign-in; the person signs in, the agent can't. In a session, run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** ([MCP](https://code.claude.com/docs/en/mcp)). For a server added by hand, `claude mcp login <name>` in a shell does the same. Invoke `/moonbounce:decisions` ([skills](https://code.claude.com/docs/en/skills)); the plugin installs the skill too. No key is bundled.
+Claude Code shows a startup notice when a server needs sign-in; the person signs in, the agent can't. In a session, run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** ([MCP](https://code.claude.com/docs/en/mcp)). For a server added by hand, `claude mcp login <name>` in a shell does the same. Invoke `/moonbounce:build` ([skills](https://code.claude.com/docs/en/skills)); the plugin installs the skill too. No key is bundled.
 
 ## Claude Code sign-in without the plugin
 
@@ -31,7 +31,7 @@ claude mcp add --transport http moonbounce https://api.moonbounce.ai/mcp
 
 Then run `/mcp` → **moonbounce** → **Authenticate**.
 
-Copy the complete `decisions/` folder to `.claude/skills/` (project) or `~/.claude/skills/` (personal) and invoke `/decisions`. Copying the source folder instead keeps the name `/moonbounce-decisions` ([skill locations](https://code.claude.com/docs/en/skills#where-skills-live)).
+Copy the complete exported `build/` and `decide/` folders to `.claude/skills/` (project) or `~/.claude/skills/` (personal) and invoke `/build` or `/decide` ([skill locations](https://code.claude.com/docs/en/skills#where-skills-live)).
 
 ## Cursor
 
@@ -43,7 +43,7 @@ Add the server to `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` ([Cursor 
 
 Sign in from Cursor's MCP settings (Customize → MCP) when the server needs login, or run `agent mcp login moonbounce` ([Cursor MCP](https://cursor.com/docs/mcp), [CLI MCP](https://cursor.com/docs/cli/mcp)).
 
-Copy `decisions/` to `.agents/skills/` or `.cursor/skills/` (project), or `~/.agents/skills/` or `~/.cursor/skills/` (personal). Invoke `/decisions` or let Cursor select it automatically ([Cursor skills](https://cursor.com/docs/skills)). Alternatively use the installer below.
+Copy `build/` and `decide/` to `.agents/skills/` or `.cursor/skills/` (project), or `~/.agents/skills/` or `~/.cursor/skills/` (personal). Invoke `/build` or `/decide` or let Cursor select it automatically ([Cursor skills](https://cursor.com/docs/skills)). Alternatively use the installer below.
 
 ## Codex app and CLI
 
@@ -55,7 +55,7 @@ codex plugin add moonbounce@moonbounce
 codex mcp login moonbounce
 ```
 
-This bundles the MCP connection and the shared `decisions` skill. Invoke `$moonbounce:decisions` or select it through the skill picker. Describe whether to build, improve, assess or resume; the same conversational intake handles each. A decision ID is optional when the agent can locate it with `list_decisions`. Restart a running Codex app if the new plugin or connection is absent. Do not also install the standalone skill in the same host.
+This bundles the MCP connection with `build`, `decide` and the compatibility `decisions` skill. Invoke `$moonbounce:build` or select it through the skill picker. Describe whether to build, improve, assess or resume; build intake handles each. To use an existing decision, invoke `$moonbounce:decide`; it needs no build intake or local files. A decision ID is optional when the agent can locate it with `list_decisions`. Restart a running Codex app if the new plugin or connection is absent. Do not also install the standalone skill in the same host.
 
 ### Without the plugin
 
@@ -66,7 +66,7 @@ codex mcp add moonbounce --url https://api.moonbounce.ai/mcp
 codex mcp login moonbounce
 ```
 
-Copy `decisions/` to `.agents/skills/` (project) or `~/.agents/skills/` (personal). Invoke `$decisions` or select it through `/skills` ([Codex skills](https://developers.openai.com/codex/skills)). Alternatively use the installer below.
+Copy `build/` and `decide/` to `.agents/skills/` (project) or `~/.agents/skills/` (personal). Invoke `$build` or `$decide` or select it through `/skills` ([Codex skills](https://developers.openai.com/codex/skills)). Alternatively use the installer below.
 
 ## Any agent: install or copy the skill
 
@@ -75,12 +75,12 @@ Plugin users should not also install a standalone copy in the same host; that du
 With Node.js 22.20 or later, use the [skills installer](https://github.com/vercel-labs/skills), which supports many agents:
 
 ```sh
-npx skills add clavataai/moonbounce-plugins --skill decisions
+npx skills add clavataai/moonbounce-plugins --skill build decide
 ```
 
 Add `-a cursor -a codex` to select agents, `-g` for global installation, or `-y` for non-interactive installation ([installer options](https://github.com/vercel-labs/skills)).
 
-Or share the complete `skills/decisions/` folder by copy or zip and place it in the agent's skills folder (locations above). Connect MCP separately; Claude Code plugin users already have both.
+Or share the complete exported skill folders by copy or zip and place them in the agent's skills folder (locations above). Connect MCP separately; Claude Code plugin users already have both.
 
 ## Other MCP clients
 
