@@ -10,7 +10,7 @@ What's here:
 - `skills/decisions/`: the compatibility entry point.
 - Claude Code and Codex plugin installation, bundling the same MCP connection and skill.
 
-The two hosts share `skills/` and `.mcp.json`. `.claude-plugin/` configures Claude Code; `.codex-plugin/` and `.agents/plugins/marketplace.json` configure Codex.
+The two hosts share `skills/` and the same MCP server URL, under a different key per host. `.claude-plugin/` and `.mcp.json` configure Claude Code, where the connection shows as `plugin:moonbounce:tools`; `.codex-plugin/`, `.codex-mcp.json` and `.agents/plugins/marketplace.json` configure Codex, where it is named `moonbounce`.
 
 ## Connect the MCP server
 
@@ -22,7 +22,7 @@ claude plugin install moonbounce --marketplace clavataai/moonbounce-plugins
 
 That needs Claude Code 2.1.292 or later; on an older version, run `claude plugin marketplace add clavataai/moonbounce-plugins`, then `claude plugin install moonbounce@moonbounce`.
 
-Then sign in: run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** (Claude Code also shows a notice at startup when it's needed; your agent can't start sign-in for you). Invoke `/moonbounce:build` and describe what you want to build, improve, assess or resume. Include a decision ID if known; the agent can list registered decisions to find it, and retrieve a server-only decision without an existing local file. The agent reuses the conversation and materials, proposes the needed work and follows the requested scope and stopping point. Use `/moonbounce:decide` to apply an existing decision to inputs; `/moonbounce:decisions` remains available for compatibility. Other MCP clients can use the `build_decision` and `decide` prompts through server-owned guidance. The plugin is a thin entry point: the returned plan identifies each stage's guidance, and `get_decision_guidance` resolves its pinned version and related role instructions.
+Then sign in: run `/mcp` → **plugin:moonbounce:tools** → **Authenticate** (Claude Code also shows a notice at startup when it's needed; your agent can't start sign-in for you). Invoke `/moonbounce:build` and describe what you want to build, improve, assess or resume. Include a decision ID if known; the agent can list registered decisions to find it, and retrieve a server-only decision without an existing local file. The agent reuses the conversation and materials, proposes the needed work and follows the requested scope and stopping point. Use `/moonbounce:decide` to apply an existing decision to inputs; `/moonbounce:decisions` remains available for compatibility. Other MCP clients can use the `build_decision` and `decide` prompts through server-owned guidance. The plugin is a thin entry point: the returned plan identifies each stage's guidance, and `get_decision_guidance` resolves its pinned version and related role instructions.
 
 For example: `/moonbounce:build refund-exception Build and register a quick, scored first version, then stop. No tuning or app changes yet.` This asks for a usable measured result, not an untested draft or a fixed Quick preset. The agent reports what was tested, the score, cost and remaining limitations; further work follows the user's request.
 
@@ -111,7 +111,7 @@ Add to your project's `.mcp.json` and export `MOONBOUNCE_API_KEY` before startin
 }
 ```
 
-If the plugin is installed, disable **plugin:moonbounce:moonbounce** in `/mcp`.
+If the plugin is installed, disable **plugin:moonbounce:tools** in `/mcp`.
 
 ### Cursor
 
@@ -149,5 +149,7 @@ claude plugin update moonbounce@moonbounce
 For Skills CLI installs, run `npx skills update`.
 
 The MCP server moved to `https://api.moonbounce.ai/mcp`. `https://app.moonbounce.ai/mcp` keeps working, but the new URL is a separate sign-in, so if you signed in before, run **Authenticate** once more after updating. API keys work on both.
+
+In Claude Code the server is now named **plugin:moonbounce:tools** (it was **plugin:moonbounce:moonbounce**). After updating, run **Authenticate** on it once, and change any permission rule or hook that names `mcp__plugin_moonbounce_moonbounce__` tools to `mcp__plugin_moonbounce_tools__`. In Codex the server is still `moonbounce`, with no new sign-in.
 
 This repository is generated from Moonbounce's source repository. Changes made here are overwritten on the next sync; contact Moonbounce with issues.

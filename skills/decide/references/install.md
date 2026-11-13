@@ -17,9 +17,9 @@ claude plugin marketplace add clavataai/moonbounce-plugins
 claude plugin install moonbounce@moonbounce
 ```
 
-The skills load as `build`, `decide` and the compatibility `decisions` entry, and the MCP server shows as `plugin:moonbounce:moonbounce` at `https://api.moonbounce.ai/mcp`, needing sign-in. An older install pointed at `https://app.moonbounce.ai/mcp`, which still works; moving to the api URL means signing in once more.
+The skills load as `build`, `decide` and the compatibility `decisions` entry, and the MCP server shows as `plugin:moonbounce:tools` at `https://api.moonbounce.ai/mcp`, needing sign-in. An older install pointed at `https://app.moonbounce.ai/mcp`, which still works; moving to the api URL means signing in once more. The server was named `plugin:moonbounce:moonbounce` before; after an update it needs **Authenticate** once under its new name, and permission rules or hooks naming `mcp__plugin_moonbounce_moonbounce__` tools must use `mcp__plugin_moonbounce_tools__`. In Codex the server is still `moonbounce`.
 
-Claude Code shows a startup notice when a server needs sign-in; the person signs in, the agent can't. In a session, run `/mcp` → **plugin:moonbounce:moonbounce** → **Authenticate** ([MCP](https://code.claude.com/docs/en/mcp)). For a server added by hand, `claude mcp login <name>` in a shell does the same. Invoke `/moonbounce:build` ([skills](https://code.claude.com/docs/en/skills)); the plugin installs the skill too. No key is bundled.
+Claude Code shows a startup notice when a server needs sign-in; the person signs in, the agent can't. In a session, run `/mcp` → **plugin:moonbounce:tools** → **Authenticate** ([MCP](https://code.claude.com/docs/en/mcp)). For a server added by hand, `claude mcp login <name>` in a shell does the same. Invoke `/moonbounce:build` ([skills](https://code.claude.com/docs/en/skills)); the plugin installs the skill too. No key is bundled.
 
 ## Claude Code sign-in without the plugin
 
@@ -108,7 +108,7 @@ Add this to `.mcp.json` and export `MOONBOUNCE_API_KEY` before starting `claude`
 }
 ```
 
-If the plugin is installed, disable `plugin:moonbounce:moonbounce` in `/mcp` so the key-based server is used.
+If the plugin is installed, disable `plugin:moonbounce:tools` in `/mcp` so the key-based server is used.
 
 ### Cursor
 

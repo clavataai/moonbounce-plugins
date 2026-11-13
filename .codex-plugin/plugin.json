@@ -6,7 +6,7 @@
   "repository": "https://github.com/clavataai/moonbounce-plugins",
   "homepage": "https://github.com/clavataai/moonbounce-plugins",
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
+  "mcpServers": "./.codex-mcp.json",
   "interface": {
     "displayName": "Moonbounce",
     "shortDescription": "Build, refine and use existing decisions"
