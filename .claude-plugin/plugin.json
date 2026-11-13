@@ -3,8 +3,8 @@
   "description": "Skills and an MCP server for building, refining and using Moonbounce decisions.",
   "author": { "name": "Moonbounce" },
   "license": "MIT",
-  "repository": "https://github.com/clavataai/moonbounce-plugins",
-  "homepage": "https://github.com/clavataai/moonbounce-plugins",
+  "repository": "https://github.com/moonbounce-ai/moonbounce-plugins",
+  "homepage": "https://github.com/moonbounce-ai/moonbounce-plugins",
   "privacyPolicyUrl": "https://app.moonbounce.ai/privacy",
   "keywords": ["moonbounce", "decisions", "mcp"]
 }
