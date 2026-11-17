@@ -28,7 +28,7 @@ For example: `/moonbounce:build refund-exception Build and register a quick, sco
 
 ### Decide with an existing decision
 
-Invoke `/moonbounce:decide` in Claude Code or `$moonbounce:decide` in Codex and describe the task, optionally naming a decision and version. The agent discovers a suitable decision, fetches its definition, gathers missing inputs and evaluates. It honors an explicit version; otherwise it selects the newest registered version and pins its hash for this task. Newest does not imply approval or measured quality. If nothing fits, it directs you to build. No repository, build plan or generated dataset is needed. Ordinary evaluations are recorded for history and feedback; an explicit dry run spends model calls without an evaluation record.
+Invoke `/moonbounce:decide` in Claude Code or `$moonbounce:decide` in Codex and describe the task, optionally naming a decision and version. The agent discovers a suitable decision, fetches its definition, gathers missing inputs and evaluates. It honors an explicit version; otherwise it selects the newest registered version and pins its hash for this task. Newest does not imply approval or measured quality. If nothing fits, it directs you to build. No repository, build plan or cases file is needed. Ordinary evaluations are recorded for history and feedback; an explicit dry run spends model calls without an evaluation record.
 
 ### Cursor
 

@@ -11,7 +11,7 @@ Moonbounce runs versioned decision structures. Your project owns its decision fi
 
 Use the connected Moonbounce MCP server and read the relevant tool schemas. For connection/authentication help, use [installation](references/install.md). Keep credentials out of files and messages.
 
-Prefer native MCP calls with small structured arguments passed directly. Guidance lookups need no arguments file. Use the upload workflow for decision, dataset and intake artifacts; retrieve transport and file details from the server guidance.
+Prefer native MCP calls with small structured arguments passed directly. Guidance lookups need no arguments file. Use the upload workflow for decision, items and intake files; retrieve transport and file details from the server guidance.
 
 Start new work with `get_decision_guidance` and `{"topic":"procedure.entry"}`. For a bounded standalone API task, such as writing/validating or reading a definition, follow its relevant procedure references using the resolved release; do not create an intake or plan unless requested. Fetch `procedure.files` before writing artifacts and `procedure.define` plus `procedure.functions` before authoring unfamiliar function syntax.
 
