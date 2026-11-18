@@ -2,16 +2,6 @@
 
 Moonbounce decisions are JSON structures your code owns, evaluated by an engine and improved through feedback.
 
-What's here:
-
-- Hosted MCP server: `https://api.moonbounce.ai/mcp`.
-- `skills/build/`: create and refine decision definitions.
-- `skills/decide/`: find and evaluate existing decisions.
-- `skills/decisions/`: the compatibility entry point.
-- Claude Code and Codex plugin installation, bundling the same MCP connection and skill.
-
-The two hosts share `skills/` and the same MCP server URL, under a different key per host. `.claude-plugin/` and `.mcp.json` configure Claude Code, where the connection shows as `plugin:moonbounce:tools`; `.codex-plugin/`, `.codex-mcp.json` and `.agents/plugins/marketplace.json` configure Codex, where it is named `moonbounce`.
-
 ## Connect the MCP server
 
 ### Claude Code
@@ -21,6 +11,8 @@ claude plugin install moonbounce --marketplace clavataai/moonbounce-plugins
 ```
 
 That needs Claude Code 2.1.292 or later; on an older version, run `claude plugin marketplace add clavataai/moonbounce-plugins`, then `claude plugin install moonbounce@moonbounce`.
+
+You need a Moonbounce team first: access is by invitation (waitlist at app.moonbounce.ai), and you create or join your team in the app.
 
 Then sign in: run `/mcp` → **plugin:moonbounce:tools** → **Authenticate** (Claude Code also shows a notice at startup when it's needed; your agent can't start sign-in for you). Invoke `/moonbounce:build` and describe what you want to build, improve, assess or resume. Include a decision ID if known; the agent can list registered decisions to find it, and retrieve a server-only decision without an existing local file. The agent reuses the conversation and materials, proposes the needed work and follows the requested scope and stopping point. Use `/moonbounce:decide` to apply an existing decision to inputs; `/moonbounce:decisions` remains available for compatibility. Other MCP clients can use the `build_decision` and `decide` prompts through server-owned guidance. The plugin is a thin entry point: the returned plan identifies each stage's guidance, and `get_decision_guidance` resolves its pinned version and related role instructions.
 
@@ -72,6 +64,16 @@ Sign-in gives team admins and members `decisions:develop` and `decisions:evaluat
 ### Verification
 
 Claude Code plugin installation from GitHub was observed with 2.1.312 in a clean profile. Codex 0.167.0 was checked for native plugin installation, discovery of the enabled Moonbounce skills and the bundled MCP declaration using an isolated configuration; production OAuth sign-in was not tested end to end. Cursor's agent CLI is checked up to the sign-in page and token exchange; its editor is not tested yet. The Skills CLI route is checked in an empty project.
+
+## What's in the plugin
+
+- Hosted MCP server: `https://api.moonbounce.ai/mcp`.
+- `skills/build/`: create and refine decision definitions.
+- `skills/decide/`: find and evaluate existing decisions.
+- `skills/decisions/`: the compatibility entry point.
+- Claude Code and Codex plugin installation, bundling the same MCP connection and skill.
+
+The two hosts share `skills/` and the same MCP server URL, under a different key per host. `.claude-plugin/` and `.mcp.json` configure Claude Code, where the connection shows as `plugin:moonbounce:tools`; `.codex-plugin/`, `.codex-mcp.json` and `.agents/plugins/marketplace.json` configure Codex, where it is named `moonbounce`.
 
 ## Add the skill
 
