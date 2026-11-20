@@ -17,7 +17,7 @@ claude plugin marketplace add clavataai/moonbounce-plugins
 claude plugin install moonbounce@moonbounce
 ```
 
-The skills load as `build`, `decide` and the compatibility `decisions` entry, and the MCP server shows as `plugin:moonbounce:tools` at `https://api.moonbounce.ai/mcp`, needing sign-in. An older install pointed at `https://app.moonbounce.ai/mcp`, which still works; moving to the api URL means signing in once more. The server was named `plugin:moonbounce:moonbounce` before; after an update it needs **Authenticate** once under its new name, and permission rules or hooks naming `mcp__plugin_moonbounce_moonbounce__` tools must use `mcp__plugin_moonbounce_tools__`. In Codex the server is still `moonbounce`.
+The skills load as `build` and `decide`, and the MCP server shows as `plugin:moonbounce:tools` at `https://api.moonbounce.ai/mcp`, needing sign-in. An older install pointed at `https://app.moonbounce.ai/mcp`, which still works; moving to the api URL means signing in once more. The server was named `plugin:moonbounce:moonbounce` before; after an update it needs **Authenticate** once under its new name, and permission rules or hooks naming `mcp__plugin_moonbounce_moonbounce__` tools must use `mcp__plugin_moonbounce_tools__`. In Codex the server is still `moonbounce`.
 
 Claude Code shows a startup notice when a server needs sign-in; the person signs in, the agent can't. In a session, run `/mcp` → **plugin:moonbounce:tools** → **Authenticate** ([MCP](https://code.claude.com/docs/en/mcp)). For a server added by hand, `claude mcp login <name>` in a shell does the same. Invoke `/moonbounce:build` ([skills](https://code.claude.com/docs/en/skills)); the plugin installs the skill too. No key is bundled.
 
@@ -55,7 +55,7 @@ codex plugin add moonbounce@moonbounce
 codex mcp login moonbounce
 ```
 
-This bundles the MCP connection with `build`, `decide` and the compatibility `decisions` skill. Invoke `$moonbounce:build` or select it through the skill picker. Describe whether to build, improve, assess or resume; build intake handles each. To use an existing decision, invoke `$moonbounce:decide`; it needs no build intake or local files. A decision ID is optional when the agent can locate it with `list_decisions`. Restart a running Codex app if the new plugin or connection is absent. Do not also install the standalone skill in the same host.
+This bundles the MCP connection with the `build` and `decide` skills. Invoke `$moonbounce:build` or select it through the skill picker. Describe whether to build, improve, assess or resume; build intake handles each. To use an existing decision, invoke `$moonbounce:decide`; it needs no build intake or local files. A decision ID is optional when the agent can locate it with `list_decisions`. Restart a running Codex app if the new plugin or connection is absent. Do not also install the standalone skill in the same host.
 
 ### Without the plugin
 

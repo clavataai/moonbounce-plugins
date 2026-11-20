@@ -6,7 +6,7 @@
     {
       "name": "moonbounce",
       "source": "./",
-      "description": "The decisions skill and Moonbounce MCP server with browser sign-in."
+      "description": "The build and decide skills and the Moonbounce MCP server with browser sign-in."
     }
   ]
 }
