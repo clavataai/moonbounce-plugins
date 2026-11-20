@@ -90,7 +90,7 @@ Moonbounce sign-in opens AuthKit and a team picker when needed. Admins and membe
 
 ## API keys, per agent
 
-No key is bundled. Give the agent `decisions:develop` and/or `decisions:evaluate` as needed, with `env:test` for Test. Never print or commit the key. When a key-based and a signed-in server are both connected, disable the signed-in one so the agent uses the key.
+No key is bundled. Give the agent `decisions:develop` and/or `decisions:evaluate` as needed, with `env:test` for Test: `decide` needs only `decisions:evaluate`, and building needs `decisions:develop`. Never print or commit the key. When a key-based and a signed-in server are both connected, disable the signed-in one so the agent uses the key.
 
 ### Claude Code
 

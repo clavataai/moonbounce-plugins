@@ -14,13 +14,13 @@ That needs Claude Code 2.1.292 or later; on an older version, run `claude plugin
 
 You need a Moonbounce team first: access is by invitation (waitlist at app.moonbounce.ai), and you create or join your team in the app.
 
-Then sign in: run `/mcp` → **plugin:moonbounce:tools** → **Authenticate** (Claude Code also shows a notice at startup when it's needed; your agent can't start sign-in for you). Invoke `/moonbounce:build` and describe what you want to build, improve, assess or resume. Include a decision ID if known; the agent can list registered decisions to find it, and retrieve a server-only decision without an existing local file. The agent reuses the conversation and materials, proposes the needed work and follows the requested scope and stopping point. Use `/moonbounce:decide` to apply an existing decision to inputs; `/moonbounce:decisions` remains available for compatibility. Other MCP clients can use the `build_decision` and `decide` prompts through server-owned guidance. The plugin is a thin entry point: the returned plan identifies each stage's guidance, and `get_decision_guidance` resolves its pinned version and related role instructions.
+Then sign in: run `/mcp` → **plugin:moonbounce:tools** → **Authenticate** (Claude Code also shows a notice at startup when it's needed; your agent can't start sign-in for you). Invoke `/moonbounce:build` and describe what you want to build, improve, assess or resume. Include a decision ID if known; the agent can list registered decisions to find it, and retrieve a server-only decision without an existing local file. The agent reuses the conversation and materials, proposes the needed work and follows the requested scope and stopping point. Use `/moonbounce:decide` to apply an existing decision to inputs; `/moonbounce:decisions` remains available for compatibility. Other MCP clients can use the `build_decision` prompt through server-owned guidance, and the `decide` prompt, which needs only `decisions:evaluate`. The plugin is a thin entry point: the returned plan identifies each stage's guidance, and `get_decision_guidance` resolves its pinned version and related role instructions.
 
 For example: `/moonbounce:build refund-exception Build and register a quick, scored first version, then stop. No tuning or app changes yet.` This asks for a usable measured result, not an untested draft or a fixed Quick preset. The agent reports what was tested, the score, cost and remaining limitations; further work follows the user's request.
 
 ### Decide with an existing decision
 
-Invoke `/moonbounce:decide` in Claude Code or `$moonbounce:decide` in Codex and describe the task, optionally naming a decision and version. The agent discovers a suitable decision, fetches its definition, gathers missing inputs and evaluates. It honors an explicit version; otherwise it selects the newest registered version and pins its hash for this task. Newest does not imply approval or measured quality. If nothing fits, it directs you to build. No repository, build plan or cases file is needed. Ordinary evaluations are recorded for history and feedback; an explicit dry run spends model calls without an evaluation record.
+Invoke `/moonbounce:decide` in Claude Code or `$moonbounce:decide` in Codex and describe the task, optionally naming a decision and version. The agent discovers a suitable decision, reads what its version needs (`get_version` with `view: "inputs"`), gathers missing inputs and evaluates it by the version's hash: two calls for a named decision whose inputs are clear, with a key that has only `decisions:evaluate`. It honors an explicit version; otherwise it selects the newest registered version and pins its hash for this task. Newest does not imply approval or measured quality. If nothing fits, it directs you to build. No repository, build plan or cases file is needed. Ordinary evaluations are recorded for history and feedback; an explicit dry run spends model calls without an evaluation record.
 
 ### Cursor
 
@@ -95,7 +95,7 @@ Or copy the complete `skills/build/` and `skills/decide/` folders into your agen
 
 ## API keys
 
-Use a key with both `decisions:develop` (hosted guidance) and `decisions:evaluate` (evaluation) for decide, and `env:test` for Test. Keep `MOONBOUNCE_API_KEY` in the agent's environment; never print or commit it. When both a signed-in server and a key-based server are connected, disable the signed-in one so the agent uses the key.
+Use a key with `decisions:evaluate` for decide, adding `decisions:develop` for build, and `env:test` for Test. Keep `MOONBOUNCE_API_KEY` in the agent's environment; never print or commit it. When both a signed-in server and a key-based server are connected, disable the signed-in one so the agent uses the key.
 
 ### Claude Code
 

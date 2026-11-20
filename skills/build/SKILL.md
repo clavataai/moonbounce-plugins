@@ -11,11 +11,11 @@ Moonbounce runs versioned decision structures. Your project owns its decision fi
 
 Use the connected Moonbounce MCP server and read the relevant tool schemas. For connection/authentication help, use [installation](references/install.md). Keep credentials out of files and messages.
 
-Prefer native MCP calls with small structured arguments passed directly. Never write a `*-guidance-args.json` or any other arguments file for a lookup, or save each guidance response: use returned content directly. Use the upload workflow for decision, items and intake files; retrieve transport and file details from the server guidance.
+Prefer native MCP calls with small structured arguments passed directly. Never write a `*-guidance-args.json` or any other arguments file for a lookup, or save each guidance response: use returned content directly. Use the upload workflow for decision and items files; retrieve transport and file details from the server guidance.
 
 Start new work with `get_decision_guidance` and `{"topic":"procedure.entry"}`. For a bounded standalone API task, such as writing/validating or reading a definition, follow its relevant procedure references using the resolved release; do not create an intake or plan unless requested.
 
-For a planning workflow, follow the entry's conversational intake instructions using its returned `intake_release`. Preserve the user's requested outcome and stopping point.
+For a planning workflow, follow the entry's intake: `submit_intake_answers` returns the next question for the person, one at a time, then the plan. Write an intake file only for evidence sets. Preserve the user's requested outcome and stopping point.
 
 To resume a saved plan, retrieve it with `get_decision_plan`, using `list_decision_plans` if needed. Reconcile it with the current request and local progress. Load its pinned common rules with `{"topic":"procedure.common","plan_id":"<plan.id>"}` and its pinned adapter with `{"topic":"procedure.plan","plan_id":"<plan.id>"}`. If no saved plan is found, start from `procedure.entry`.
 
