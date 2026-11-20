@@ -2,7 +2,7 @@
 
 Generated from public topic metadata. This table is a lookup, not an execution order.
 
-Read the returned plan. For a selected stage, use its `guidance.topic` with `plan_id: plan.id` in `get_decision_guidance`; the server resolves its pinned release. Follow role/shared links using `related_guidance[].arguments`, preserving that plan and owning stage.
+Read the returned plan. For a selected stage, use its `guidance.topic` with `plan_id: plan.id` in `get_decision_guidance`; the server resolves its pinned release. Read a topic the response lists in `related_guidance` with that topic plus the response's `plan_id` and `stage_id` (no `stage_id` for a `stage.*` topic), or its `release` when it has no plan.
 
 | Plan stage | Reference | Purpose |
 |---|---|---|
@@ -22,3 +22,5 @@ Read the returned plan. For a selected stage, use its `guidance.topic` with `pla
 | `integration` | `plan.stages[id=integration].guidance` | Execute the integration procedure |
 
 For a standalone task, retrieve `procedure.entry` to discover procedure topics, then use the resolved release explicitly. When a plan exists, retrieve `procedure.plan` with its ID and follow its stage references. Worker prompts are linked from stage guidance, not defined in this plugin.
+
+`procedure.entry` carries the common rules (effects, uploads, shell commands); every other procedure points to `procedure.common` instead of repeating them. Fetch `procedure.common` again, with the same `plan_id` or `release`, in a new session or after your context is compacted.
