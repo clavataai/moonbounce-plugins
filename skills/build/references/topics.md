@@ -2,7 +2,7 @@
 
 Generated from public topic metadata. This table is a lookup, not an execution order.
 
-Read the returned plan. For a selected stage, use its `guidance.topic` with `plan_id: plan.id` in `get_decision_guidance`; the server resolves its pinned release. Check the returned plan/stage/topic/release/adapter against the plan. Follow role/shared links using `related_guidance[].arguments`, preserving that plan and owning stage.
+Read the returned plan. For a selected stage, use its `guidance.topic` with `plan_id: plan.id` in `get_decision_guidance`; the server resolves its pinned release. Follow role/shared links using `related_guidance[].arguments`, preserving that plan and owning stage.
 
 | Plan stage | Reference | Purpose |
 |---|---|---|
